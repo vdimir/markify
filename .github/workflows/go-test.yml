@@ -20,10 +20,11 @@ jobs:
       id: go
 
     - name: Go get
-      run: go get -v -t ./...
+      run: go get -v -t -d ./...
 
     - name: Go generate
       run: |
+        go get github.com/rakyll/statik
         GOPATH=$(go env GOPATH) go generate ./...
 
     - name: Test
