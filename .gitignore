@@ -26,3 +26,6 @@
 
 # go data embededb to binary
 app/statik.go
+
+# coveralls profile
+*.cov

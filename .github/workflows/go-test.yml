@@ -33,6 +33,8 @@ jobs:
 
     - name: Submit goveralls
       run: |
+        mv $GITHUB_WORKSPACE/profile.cov $GITHUB_WORKSPACE/profile.cov_tmp
+        grep -v "statik.go:" $GITHUB_WORKSPACE/profile.cov_tmp > $GITHUB_WORKSPACE/profile.cov
         go get -u github.com/mattn/goveralls
         $(go env GOPATH)/bin/goveralls -service="github" -coverprofile=$GITHUB_WORKSPACE/profile.cov
       env:
