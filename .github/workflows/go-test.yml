@@ -19,9 +19,12 @@ jobs:
         go-version: 1.13
       id: go
 
+    - name: Go get
+      run: go get -v -t ./...
+
     - name: Go generate
       run: |
-        go generate ./...
+        GOPATH=$(go env GOPATH) go generate ./...
 
     - name: Test
       run: |
