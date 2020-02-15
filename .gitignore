@@ -13,3 +13,16 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS specific
+.DS_Store
+
+# Bold db
+/*.db
+
+# go data embededb to binary
+app/statik.go

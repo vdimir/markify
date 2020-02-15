@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ .Title }}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/assets/style.css">
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+</head>
+<body>
+    <header>
+        <h1>{{ .Title }}</h1>
+    </header>
+    <div class="form-block text-edit-block">
+        {{- if .HeaderMsg }}<h1>{{ .HeaderMsg }}</h1>{{ end }}
+        {{- if .MainMsg }}<p>{{ .MainMsg }}</p>{{ end }}
+        <form class="text-edit-form" action="/compose" method="post" autocomplete="off" target="_blank">
+            <textarea name="text" maxlength="20000" placeholder="Write..." required autofocus></textarea>
+            <button class="btn-send-text" formtarget="_self" type="submit">
+                send <i class="fa fa-paper-plane" aria-hidden="true"></i>
+            </button><!-- TODO: How to remove wrap without this comment hack?
+            --><button class="btn-preview-text" formtarget="_blank" formaction="/preview" type="submit">
+                <i class="fa fa-eye" aria-hidden="true"></i>
+            </button>
+            <!-- <span class="light-text">or <a href="/"><u>paste url</u></a></span> -->
+            <br>
+            {{ template "settings" }}
+        </form>
+    </div>
+    {{ template "footer" }}
+</body>
+</html>
