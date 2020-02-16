@@ -8,10 +8,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/vdimir/markify/fetch"
-	"github.com/vdimir/markify/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vdimir/markify/fetch"
+	"github.com/vdimir/markify/testutil"
 )
 
 const testDataPath = "../testdata"
@@ -39,7 +39,7 @@ func createNewTestApp(t *testing.T) (tapp *App, teardown func()) {
 		Debug:          true,
 		AssetsPrefix:   "../assets",
 		PageCachePath:  path.Join(tmpPath, "cache.db"),
-		KeyStorePath:   path.Join(tmpPath, "keys.db"),
+		URLHashPath:    path.Join(tmpPath, "keys.db"),
 		MdTextPath:     path.Join(tmpPath, "mdtext.db"),
 	})
 	assert.NoError(t, err)
@@ -91,7 +91,7 @@ func TestNewPage(t *testing.T) {
 	assert.Error(err)
 	assert.IsType(UserError{}, err)
 
-	data, err := tapp.keyStore.Load(urlHash)
+	data, err := tapp.urlHashStore.Load(urlHash)
 	assert.NoError(err)
 	assert.Equal(data, []byte("http://foo.bar/page.md"))
 

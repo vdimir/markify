@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"time"
 
-	"github.com/vdimir/markify/util"
 	"github.com/pkg/errors"
+	"github.com/vdimir/markify/util"
 	bolt "go.etcd.io/bbolt"
 )
 

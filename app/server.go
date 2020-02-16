@@ -35,6 +35,8 @@ func (app *App) StartServer() {
 	app.addFileServer(r, "/assets")
 	app.addFixedPages(r)
 
+	r.Get("/ping", app.handlePing)
+
 	r.Get("/", app.handleIndexPage)
 	r.Get("/p/{pageID}", app.handleReadHashPage)
 
@@ -64,6 +66,11 @@ func (app *App) StartServer() {
 	if err != nil {
 		panic(errors.Wrap(err, "cannot start server"))
 	}
+}
+
+func (app *App) handlePing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(app.cfg.StatusText))
 }
 
 func (app *App) handleIndexPage(w http.ResponseWriter, r *http.Request) {

@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/pkg/errors"
+	"github.com/rakyll/statik/fs"
 	"github.com/vdimir/markify/fetch"
 	"github.com/vdimir/markify/render/htmltemplate"
 	"github.com/vdimir/markify/render/md"
 	"github.com/vdimir/markify/store"
 	"github.com/vdimir/markify/util"
-	"github.com/pkg/errors"
-	"github.com/rakyll/statik/fs"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -27,15 +27,16 @@ type Config struct {
 	Debug          bool
 	AssetsPrefix   string
 	PageCachePath  string
-	KeyStorePath   string
+	URLHashPath    string
 	MdTextPath     string
+	StatusText     string
 }
 
 // App contains application parts
 type App struct {
 	cfg           Config
 	pageCache     store.Store
-	keyStore      store.Store
+	urlHashStore  store.Store
 	rawTextStore  store.KeyStore
 	render        *md.Render
 	fetcher       fetch.Fetcher
@@ -46,20 +47,23 @@ type App struct {
 
 // NewApp create new App instance
 func NewApp(cfg Config) (*App, error) {
-	keyStore, err := store.NewBoltStorage(cfg.KeyStorePath, bolt.Options{})
+	urlHashStore, err := store.NewBoltStorage(cfg.URLHashPath, bolt.Options{})
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("[INFO] open database %s", cfg.URLHashPath)
 
 	pageStore, err := store.NewBoltStorage(cfg.PageCachePath, bolt.Options{})
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("[INFO] open database %s", cfg.PageCachePath)
 
 	rawTextStore, err := store.NewBoltStorage(cfg.MdTextPath, bolt.Options{})
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("[INFO] open database %s", cfg.MdTextPath)
 
 	var localPath *string
 	if cfg.Debug {
@@ -87,7 +91,7 @@ func NewApp(cfg Config) (*App, error) {
 	app := &App{
 		cfg:           cfg,
 		pageCache:     pageStore,
-		keyStore:      keyStore,
+		urlHashStore:  urlHashStore,
 		render:        htmlRen,
 		fetcher:       fetch.NewFetcher(),
 		staticFs:      staticFs,
@@ -128,7 +132,7 @@ func (app *App) getRawFromURL(pageURL *url.URL) ([]byte, error) {
 
 func (app *App) newShortEncode(data []byte) ([]byte, error) {
 	urlHash, _ := util.BaseHashEncode(data, defaultURLHashLen)
-	if t, err := app.keyStore.Timestamp(urlHash); t != 0 || err != nil {
+	if t, err := app.urlHashStore.Timestamp(urlHash); t != 0 || err != nil {
 		if err != nil {
 			return nil, DBError{err}
 		}
@@ -160,7 +164,7 @@ func (app *App) addPageByURL(params formParams) ([]byte, error) {
 		return nil, err
 	}
 
-	err = app.keyStore.Save(urlHash, []byte(pageURL.String()))
+	err = app.urlHashStore.Save(urlHash, []byte(pageURL.String()))
 	if err != nil {
 		return nil, DBError{err}
 	}
@@ -187,7 +191,7 @@ func (app *App) addPageByText(formData formParams) ([]byte, error) {
 
 	localURL := bytes.NewBuffer([]byte("local://"))
 	localURL.Write(key)
-	err = app.keyStore.Save(urlHash, localURL.Bytes())
+	err = app.urlHashStore.Save(urlHash, localURL.Bytes())
 	if err != nil {
 		return nil, DBError{err}
 	}
