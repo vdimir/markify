@@ -3,6 +3,8 @@ FROM golang:1.13-alpine as build-backend
 ADD . /build
 WORKDIR /build
 
+ENV CGO_ENABLED 0
+
 RUN go get -v -t -d ./... && \
     go get github.com/rakyll/statik
 
