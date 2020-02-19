@@ -24,6 +24,9 @@
 # Bold db
 /*.db
 
+# container data
+/var
+
 # go data embededb to binary
 app/statik.go
 
