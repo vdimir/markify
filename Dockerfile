@@ -13,6 +13,7 @@ RUN GOPATH=$(go env GOPATH) go generate ./... && \
     echo "version=$version" && \
     go build -o markify -ldflags "-X main.revision=${version} -s -w" ./
 
+RUN go test -timeout=60s ./...
 
 FROM alpine:3.11
 

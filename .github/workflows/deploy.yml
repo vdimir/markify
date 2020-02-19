@@ -1,0 +1,40 @@
+name: deploy
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Login to Package Registry
+        run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Setup SSH Keys and known_hosts
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+          SSH_HOST: markify.dev
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.SSH_DEPLOY_PRIVATE_KEY }}"
+          ssh -q vdimir@$SSH_HOST "echo ok"
+
+      - name: Build docker image
+        run: docker build . -t markify
+
+      - name: Tag and Push image
+        run: |
+          docker tag markify vdimir/markify:latest
+          docker push vdimir/markify:latest
+
+      - name: Deploy
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+          SSH_HOST: markify.dev
+        run: |
+          ssh vdimir@$SSH_HOST "cd /srv/markify && docker-compose pull"
+          ssh vdimir@$SSH_HOST "cd /srv/markify && docker-compose up -d"
