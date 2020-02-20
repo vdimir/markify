@@ -36,6 +36,7 @@ func (app *App) StartServer() {
 	app.addFixedPages(r)
 
 	r.Get("/ping", app.handlePing)
+	r.Get("/robots.txt", app.handleRobotsTxt)
 
 	r.Get("/", app.handleIndexPage)
 	r.Get("/p/{pageID}", app.handleReadHashPage)
@@ -129,6 +130,17 @@ func (app *App) handleNewByText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/p/%s", urlHash), 302)
+}
+
+func (app *App) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
+	allowedPaths := []string{
+		"/$", "/help$",
+	}
+	buf := bytes.NewBufferString("User-agent: *\nDisallow: /\n")
+	for _, path := range allowedPaths {
+		buf.WriteString(fmt.Sprintf("Allow: %s\n", path))
+	}
+	buf.WriteTo(w)
 }
 
 func (app *App) handlePreviewText(w http.ResponseWriter, r *http.Request) {
