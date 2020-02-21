@@ -38,5 +38,6 @@ jobs:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
           SSH_HOST: markify.dev
         run: |
+          scp docker-compose.yml vdimir@$SSH_HOST:/srv/markify
           ssh vdimir@$SSH_HOST "cd /srv/markify && docker-compose pull"
           ssh vdimir@$SSH_HOST "cd /srv/markify && docker-compose up -d"
