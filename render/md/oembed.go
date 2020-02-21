@@ -5,8 +5,8 @@ import (
 	"log"
 	"regexp"
 
-	mutil "github.com/vdimir/markify/util"
 	"github.com/pkg/errors"
+	mutil "github.com/vdimir/markify/util"
 	"github.com/yuin/goldmark"
 	gast "github.com/yuin/goldmark/ast"
 

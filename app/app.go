@@ -85,7 +85,7 @@ func NewApp(cfg Config) (*App, error) {
 		htmlTplRender, err = htmltemplate.NewRender(staticFs)
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "error initalizing html templates")
+		return nil, errors.Wrap(err, "error initializing html templates")
 	}
 
 	app := &App{
@@ -221,7 +221,7 @@ func newStaticFs(localPath *string) http.FileSystem {
 		log.Printf("[INFO] use assets from local directory %q", *localPath)
 		statikFS = http.Dir(*localPath)
 	} else {
-		log.Printf("[INFO] use assets embeded to binary")
+		log.Printf("[INFO] use assets embedded to binary")
 		var err error
 		statikFS, err = fs.New()
 		if err != nil {

@@ -13,7 +13,7 @@ func (e UserError) Error() string {
 	return fmt.Sprintf("UserError: %s", e.inner)
 }
 
-// DBError error occured in database operation
+// DBError error occurred in database operation
 type DBError struct {
 	inner error
 }

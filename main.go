@@ -39,7 +39,7 @@ func main() {
 		PageCachePath:  path.Join(opts.DataDir, "page.db"),
 		URLHashPath:    path.Join(opts.DataDir, "url_hash.db"),
 		MdTextPath:     path.Join(opts.DataDir, "mdtext.db"),
-		StatusText: fmt.Sprintf(`{"revision":"%s"}`, revision),
+		StatusText:     fmt.Sprintf(`{"revision":"%s"}`, revision),
 	})
 
 	if err != nil {

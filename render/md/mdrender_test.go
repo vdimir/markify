@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/html"
 
-	"github.com/vdimir/markify/testutil"
 	"github.com/stretchr/testify/require"
+	"github.com/vdimir/markify/testutil"
 )
 
 const testDataPath = "../../testdata"
@@ -217,7 +217,7 @@ func traverseHTMLNodes(root *html.Node, process func(n *html.Node)) {
 }
 
 // checkContaining checks that data contains (un)expected  substirings
-// expectedSubslices values should be true if string requred
+// expectedSubslices values should be true if string required
 // and false if string should be absent
 func checkContaining(t *testing.T, data []byte, expectedSubslices map[string]bool) {
 	for k, shouldContain := range expectedSubslices {
@@ -236,7 +236,7 @@ type kvPair struct {
 }
 
 // checkHTMLAttrs checks that specified tags are presented with given attributes.
-// If attrinues is nil, only tag existance checked
+// If attrinues is nil, only tag existence checked
 func checkHTMLAttrs(t *testing.T, data []byte, expNodes map[string]*kvPair) {
 	root, err := html.Parse(bytes.NewReader(data))
 	require.NoError(t, err)

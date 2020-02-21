@@ -14,7 +14,7 @@ import (
 // FileWalkerFunc walker function for WalkFiles
 type FileWalkerFunc func(data []byte, filePath string) error
 
-// WalkFiles is wrapper around fs.Walk that walks only files exculding direcorines
+// WalkFiles is wrapper around fs.Walk that walks only files excluding direcorines
 // and handles file one errors
 func WalkFiles(hfs http.FileSystem, prefixPath string, walker FileWalkerFunc) error {
 	walkErr := fs.Walk(hfs, prefixPath, func(filePath string, info os.FileInfo, err error) error {
