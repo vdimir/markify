@@ -17,7 +17,7 @@
     <div class="form-block url-block">
         {{- if .HeaderMsg }}<h1>{{ .HeaderMsg }}</h1>{{ end }}
         {{- if .MainMsg }}<p>{{ .MainMsg }}</p>{{ end }}
-        <form class="url-form" action="/new" method="post" autocomplete="off">
+        <form class="url-form" action="/link" method="post" autocomplete="off">
             <input type="text" name="url" placeholder="Paste URL to raw markdown" autofocus>
             <button type="submit"><i class="fa fa-arrow-right" aria-hidden="true"></i></button>
             <span class="light-text">or press Enter to <a href="/compose">paste text</a></span>

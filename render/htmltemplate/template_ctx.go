@@ -3,8 +3,8 @@ package htmltemplate
 import "html/template"
 
 const (
-	// IndexTemplatePage identifier for index page
-	IndexTemplatePage = "index.html"
+	// URLInputPage identifier for index page
+	URLInputPage = "url_prompt.html"
 	// StatusTemplatePage identifier for status page
 	StatusTemplatePage = "status.html"
 	// ContentTemplatePage identifier for page with content such article
@@ -13,7 +13,7 @@ const (
 	TextEditorTemplate = "editor.html"
 )
 
-// InfoPageContext cotains info data for info_page.html and index.html
+// InfoPageContext cotains info data pages with Title and Header
 type InfoPageContext struct {
 	Title     string
 	HeaderMsg string

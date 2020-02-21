@@ -41,8 +41,8 @@ func (app *App) StartServer() {
 	r.Get("/", app.handleIndexPage)
 	r.Get("/p/{pageID}", app.handleReadHashPage)
 
-	r.Get("/new", app.handleIndexPage)
-	r.Post("/new", app.handleNewByURL)
+	r.Get("/link", app.handleUrlInput)
+	r.Post("/link", app.handleNewByURL)
 
 	r.Get("/compose", app.handleCreateTextPage)
 	r.Post("/compose", app.handleNewByText)
@@ -75,14 +75,21 @@ func (app *App) handlePing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) handleIndexPage(w http.ResponseWriter, r *http.Request) {
+	app.handleCreateTextPage(w, r)
+}
+
+func (app *App) handleUrlInput(w http.ResponseWriter, r *http.Request) {
 	ctx := htmltemplate.InfoPageContext{
 		Title: "markify",
 	}
-	app.wirteTemplateToResp(htmltemplate.IndexTemplatePage, http.StatusOK, ctx, w)
+	app.wirteTemplateToResp(htmltemplate.URLInputPage, http.StatusOK, ctx, w)
 }
 
 func (app *App) handleCreateTextPage(w http.ResponseWriter, r *http.Request) {
-	app.wirteTemplateToResp(htmltemplate.TextEditorTemplate, http.StatusOK, nil, w)
+	ctx := htmltemplate.InfoPageContext{
+		Title: "markify",
+	}
+	app.wirteTemplateToResp(htmltemplate.TextEditorTemplate, http.StatusOK, ctx, w)
 }
 
 type formParams struct {
@@ -113,7 +120,7 @@ func (app *App) handleNewByURL(w http.ResponseWriter, r *http.Request) {
 				Title:   "markify",
 				MainMsg: "Incorrect URL or data, try another:",
 			}
-			app.wirteTemplateToResp(htmltemplate.IndexTemplatePage, http.StatusBadRequest, ctx, w)
+			app.wirteTemplateToResp(htmltemplate.URLInputPage, http.StatusBadRequest, ctx, w)
 		} else {
 			app.serverError(err, w)
 		}
