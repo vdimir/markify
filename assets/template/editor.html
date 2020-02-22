@@ -19,15 +19,19 @@
         {{- if .MainMsg }}<p>{{ .MainMsg }}</p>{{ end }}
         <form class="text-edit-form" action="/compose" method="post" autocomplete="off" target="_blank">
             <textarea name="text" maxlength="20000" placeholder="# write here..." required autofocus></textarea>
-            <button class="btn-send-text" formtarget="_self" type="submit">
-                send <i class="fa fa-paper-plane" aria-hidden="true"></i>
-            </button><!-- TODO: How to remove wrap without this comment hack?
-            --><button class="btn-preview-text" formtarget="_blank" formaction="/preview" type="submit">
-                <i class="fa fa-eye" aria-hidden="true"></i>
-            </button>
-            <span class="light-text">or <a href="/link">paste link</a></span>
-            <br>
-            {{ template "settings" }}
+            <div class="text-edit-form-controls">
+                <button class="btn-send-text" formtarget="_self" type="submit">
+                    send <i class="fa fa-paper-plane" aria-hidden="true"></i>
+                </button>
+                <button class="btn-preview-text" formtarget="_blank" formaction="/preview" type="submit">
+                    <i class="fa fa-eye" aria-hidden="true"></i>
+                </button>
+                <div class="light-text">or <a href="/link">paste link</a></div>
+                <div style="flex-grow: 1;"></div>
+                <div class="light-text"><a href="/about">about</a></div>
+                {{ template "settings" }}
+            </div>
+
         </form>
     </div>
 </body>
