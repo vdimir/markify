@@ -1,5 +1,7 @@
 FROM golang:1.13-alpine as build-backend
 
+ARG REVISION_INFO
+
 ADD . /build
 WORKDIR /build
 
@@ -11,7 +13,7 @@ RUN go get -v -t -d ./... && \
 # RUN go install -v ./...
 
 RUN GOPATH=$(go env GOPATH) go generate ./... && \
-    version=$(date +%Y%m%d_%H%M%S) && \
+    version="${REVISION_INFO:-unknown}" && \
     echo "version=$version" && \
     go build -o markify -ldflags "-X main.revision=${version} -s -w" ./
 

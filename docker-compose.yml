@@ -2,7 +2,11 @@ version: '2'
 
 services:
     markify:
-        build: .
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                - REVISION_INFO
         image: vdimir/markify:latest
         container_name: "markify"
         hostname: "markify"

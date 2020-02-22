@@ -27,7 +27,7 @@ jobs:
           ssh -q vdimir@$SSH_HOST "echo ok"
 
       - name: Build docker image
-        run: docker build . -t markify
+        run: docker build --build-arg REVISION_INFO="${GITHUB_SHA:0:7}-$(date +%Y%m%d_%H%M%S)" . -t markify
 
       - name: Tag and Push image
         run: |
