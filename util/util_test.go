@@ -17,6 +17,7 @@ func TestWalkFilesHttpDir(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.GreaterOrEqual(t, len(filesNames), 5)
-	assert.Contains(t, filesNames, "index.html")
+	// Check some files exists
+	assert.Contains(t, filesNames, "page.html")
 	assert.Contains(t, filesNames, "partial/footer.html")
 }
