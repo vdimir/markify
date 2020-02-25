@@ -1,4 +1,4 @@
-package store
+package kvstore
 
 import (
 	"path"
@@ -37,6 +37,10 @@ func TestBoltStore(t *testing.T) {
 	assert.NotZero(t, ts1)
 
 	err = keyStore.Save([]byte("abc"), []byte("456"))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "already exists")
+
+	err = keyStore.Update([]byte("abc"), []byte("456"))
 	require.NoError(t, err)
 
 	data, err = keyStore.Load([]byte("abc"))
@@ -48,7 +52,7 @@ func TestBoltStore(t *testing.T) {
 	assert.Greater(t, ts2, ts1)
 }
 
-func TestBoltNewKey(t *testing.T) {
+func TestBoltNewEntry(t *testing.T) {
 	tmpPath, cleanup := testutil.GetTempFolder(t, "bolt_store")
 	defer cleanup()
 
@@ -56,11 +60,11 @@ func TestBoltNewKey(t *testing.T) {
 	keyStore, err := NewBoltStorage(boltPath, bolt.Options{})
 	require.NoError(t, err)
 
-	k1, err := keyStore.NewKey([]byte("abc"))
+	k1, err := keyStore.NewEntry([]byte("abc"))
 	assert.NoError(t, err)
-	k2, err := keyStore.NewKey([]byte("bca"))
+	k2, err := keyStore.NewEntry([]byte("bca"))
 	assert.NoError(t, err)
-	k3, err := keyStore.NewKey([]byte("abc"))
+	k3, err := keyStore.NewEntry([]byte("abc"))
 	assert.NoError(t, err)
 
 	var data []byte
@@ -81,7 +85,7 @@ func TestBoltNewKey(t *testing.T) {
 	n := 100
 	keys := map[string]bool{}
 	for i := 0; i < n; i++ {
-		k, err := keyStore.NewKey([]byte("abc"))
+		k, err := keyStore.NewEntry([]byte("abc"))
 		assert.NoError(t, err)
 		keys[string(k)] = true
 		assert.GreaterOrEqual(t, len(k), 12)
@@ -89,7 +93,7 @@ func TestBoltNewKey(t *testing.T) {
 	assert.Len(t, keys, n)
 }
 
-func BenchmarkBoltNewKey(b *testing.B) {
+func BenchmarkBoltNewEntry(b *testing.B) {
 	tmpPath, cleanup := testutil.GetTempFolder(b, "bolt_store")
 	defer cleanup()
 
@@ -99,7 +103,7 @@ func BenchmarkBoltNewKey(b *testing.B) {
 
 	keys := map[string]bool{}
 	for i := 0; i < b.N; i++ {
-		k, err := keyStore.NewKey([]byte("abc"))
+		k, err := keyStore.NewEntry([]byte("abc"))
 		assert.NoError(b, err)
 		keys[string(k)] = true
 		assert.GreaterOrEqual(b, len(k), 12)

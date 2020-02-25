@@ -36,9 +36,9 @@ func main() {
 		ServerPort:     opts.Port,
 		Debug:          opts.Debug,
 		AssetsPrefix:   "assets",
-		PageCachePath:  path.Join(opts.DataDir, "page.db"),
-		URLHashPath:    path.Join(opts.DataDir, "url_hash.db"),
-		MdTextPath:     path.Join(opts.DataDir, "mdtext.db"),
+		RenderStore:    path.Join(opts.DataDir, "render.db"),
+		PageMetaStore:  path.Join(opts.DataDir, "page_meta.db"),
+		TextStore:      path.Join(opts.DataDir, "mdtext.db"),
 		StatusText:     fmt.Sprintf(`{"revision":"%s"}`, revision),
 	})
 

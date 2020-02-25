@@ -15,10 +15,10 @@
         <h1>{{ .Title }}</h1>
     </header>
     <div class="form-block text-edit-block">
-        {{- if .HeaderMsg }}<h1>{{ .HeaderMsg }}</h1>{{ end }}
-        {{- if .MainMsg }}<p>{{ .MainMsg }}</p>{{ end }}
+        {{- if .Msg }}<p>{{ .Msg }}</p>{{ end }}
         <form class="text-edit-form" action="/compose" method="post" autocomplete="off" target="_blank">
-            <textarea name="text" maxlength="20000" placeholder="# write here..." required autofocus></textarea>
+            <input type="hidden" name="type" value="text">
+            <textarea name="data" maxlength="20000" placeholder="# write here..." required autofocus>{{ .InitialText }}</textarea>
             <div class="text-edit-form-controls">
                 <button class="btn-send-text" formtarget="_self" type="submit">
                     send <i class="fa fa-paper-plane" aria-hidden="true"></i>
@@ -31,7 +31,6 @@
                 <div class="light-text"><a href="/about">about</a></div>
                 {{ template "settings" }}
             </div>
-
         </form>
     </div>
 </body>

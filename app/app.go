@@ -1,21 +1,23 @@
 package app
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
+	"html/template"
 	"log"
 	"net/http"
-	"net/url"
+	"path"
+
+	"github.com/vdimir/markify/store/kvstore"
+	"go.etcd.io/bbolt"
 
 	"github.com/pkg/errors"
 	"github.com/rakyll/statik/fs"
+	"github.com/vdimir/markify/app/apperr"
+	"github.com/vdimir/markify/app/engine"
+	"github.com/vdimir/markify/app/view"
 	"github.com/vdimir/markify/fetch"
-	"github.com/vdimir/markify/render/htmltemplate"
-	"github.com/vdimir/markify/render/md"
-	"github.com/vdimir/markify/store"
+	md "github.com/vdimir/markify/mdrender"
 	"github.com/vdimir/markify/util"
-	bolt "go.etcd.io/bbolt"
 )
 
 const defaultURLHashLen = 7
@@ -26,208 +28,133 @@ type Config struct {
 	ServerPort     uint16
 	Debug          bool
 	AssetsPrefix   string
-	PageCachePath  string
-	URLHashPath    string
-	MdTextPath     string
+	DBPath         string
 	StatusText     string
 }
 
-// App contains application parts
+// App provides high level interface to app functions for server
 type App struct {
-	cfg           Config
-	pageCache     store.Store
-	urlHashStore  store.Store
-	rawTextStore  store.KeyStore
-	render        *md.Render
-	fetcher       fetch.Fetcher
-	staticFs      http.FileSystem
-	htmlTplRender htmltemplate.HTMLPageRender
-	httpServer    *http.Server
+	cfg          Config
+	engine       *engine.DocEngine
+	docIDMapping kvstore.Store
+	staticFs     http.FileSystem
+	htmlView     view.HTMLPageRender
+	httpServer   *http.Server
 }
 
 // NewApp create new App instance
 func NewApp(cfg Config) (*App, error) {
-	urlHashStore, err := store.NewBoltStorage(cfg.URLHashPath, bolt.Options{})
+	docIDMapping, err := kvstore.NewBoltStorage(path.Join(cfg.DBPath, "docid.db"), bbolt.Options{})
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("[INFO] open database %s", cfg.URLHashPath)
 
-	pageStore, err := store.NewBoltStorage(cfg.PageCachePath, bolt.Options{})
+	mdRen, err := md.NewRender()
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("[INFO] open database %s", cfg.PageCachePath)
+	docEngine := engine.NewDocEngine(cfg.DBPath, mdRen, fetch.NewFetcher())
 
-	rawTextStore, err := store.NewBoltStorage(cfg.MdTextPath, bolt.Options{})
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("[INFO] open database %s", cfg.MdTextPath)
-
-	var localPath *string
+	var staticFs http.FileSystem
 	if cfg.Debug {
-		localPath = new(string)
-		*localPath = cfg.AssetsPrefix
-	}
-
-	htmlRen, err := md.NewRender()
-	if err != nil {
-		return nil, err
-	}
-
-	staticFs := newStaticFs(localPath)
-
-	var htmlTplRender htmltemplate.HTMLPageRender
-	if cfg.Debug {
-		htmlTplRender, err = htmltemplate.NewDebugRender(staticFs)
+		staticFs = newLocalFs(cfg.AssetsPrefix)
 	} else {
-		htmlTplRender, err = htmltemplate.NewRender(staticFs)
+		staticFs = newStatikFs()
+	}
+
+	var htmlView view.HTMLPageRender
+	if cfg.Debug {
+		htmlView, err = view.NewDebugRender(staticFs)
+	} else {
+		htmlView, err = view.NewRender(staticFs)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "error initializing html templates")
 	}
 
 	app := &App{
-		cfg:           cfg,
-		pageCache:     pageStore,
-		urlHashStore:  urlHashStore,
-		render:        htmlRen,
-		fetcher:       fetch.NewFetcher(),
-		staticFs:      staticFs,
-		htmlTplRender: htmlTplRender,
-		rawTextStore:  rawTextStore,
+		cfg:          cfg,
+		engine:       docEngine,
+		docIDMapping: docIDMapping,
+		staticFs:     staticFs,
+		htmlView:     htmlView,
 	}
+
 	return app, nil
 }
 
-func (app *App) saveRenderToCache(rawMdData []byte, urlHash []byte, renderOpt *md.Options) error {
-
-	htmlBuf, err := app.render.Render(rawMdData, renderOpt)
-	if err != nil {
-		return errors.Wrap(err, "page render error")
+func (app *App) concatTitle(docTitle string, customTitle string) string {
+	switch {
+	case docTitle != "" && customTitle != "":
+		return fmt.Sprintf("%s - %s", customTitle, docTitle)
+	case docTitle != "":
+		return string(docTitle)
+	case customTitle != "":
+		return customTitle
 	}
-
-	err = app.pageCache.Save(urlHash, htmlBuf.Bytes())
-	if err != nil {
-		return DBError{err}
-	}
-	return err
+	return "markify"
 }
 
-// getRawFromURL download raw markdown from url
-func (app *App) getRawFromURL(pageURL *url.URL) ([]byte, error) {
-	dataReader, err := app.fetcher.Fetch(pageURL.String())
-	if err != nil {
-		return nil, err
+func (app *App) viewDocument(doc engine.DocumentRender, title string, w http.ResponseWriter) {
+	docView := &view.PageContext{
+		Title: app.concatTitle(doc.Title(), title),
+		Body:  doc.HTMLBody(),
 	}
-	defer dataReader.Close()
-
-	rawMdData, err := ioutil.ReadAll(dataReader)
-	if err != nil {
-		return nil, err
-	}
-	return rawMdData, nil
+	app.viewTemplate(http.StatusOK, docView, w)
 }
 
-func (app *App) newShortEncode(data []byte) ([]byte, error) {
-	urlHash, _ := util.BaseHashEncode(data, defaultURLHashLen)
-	if t, err := app.urlHashStore.Timestamp(urlHash); t != 0 || err != nil {
-		if err != nil {
-			return nil, DBError{err}
-		}
-		return nil, fmt.Errorf("key collision: %q exists  in db", urlHash)
+func (app *App) viewRawDocument(doc engine.DocumentText, title string, w http.ResponseWriter) {
+	docView := &view.PageContext{
+		Title: app.concatTitle(doc.Title(), title),
+		Body:  template.HTML(fmt.Sprintf("<pre><code>%s</code></pre>", doc.MdText())),
 	}
-	return urlHash, nil
+	app.viewTemplate(http.StatusOK, docView, w)
 }
 
-// addPageByURL download raw markdown from url and save rendered page
-func (app *App) addPageByURL(params formParams) ([]byte, error) {
-	pageURL, err := app.parseURL(string(params.TextData))
+func (app *App) createDocID(doc engine.DocumentSaved) ([]byte, error) {
+	newID := util.Base58UID(defaultURLHashLen)
+	err := app.docIDMapping.Save(newID, doc.Key())
 	if err != nil {
-		return nil, UserError{err}
+		return nil, apperr.DBError{err}
 	}
-
-	rawMdData, err := app.getRawFromURL(pageURL)
-	if err != nil {
-		return nil, UserError{err}
-	}
-
-	urlHash, err := app.newShortEncode([]byte(pageURL.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	opt := &md.Options{BaseURL: pageURL, DisableShortcodes: !params.EnableShortcodes}
-	err = app.saveRenderToCache(rawMdData, urlHash, opt)
-	if err != nil {
-		return nil, err
-	}
-
-	err = app.urlHashStore.Save(urlHash, []byte(pageURL.String()))
-	if err != nil {
-		return nil, DBError{err}
-	}
-
-	return urlHash, nil
+	return newID, nil
 }
 
-func (app *App) addPageByText(formData formParams) ([]byte, error) {
-	key, err := app.rawTextStore.NewKey(formData.TextData)
-	if err != nil {
-		return nil, DBError{err}
-	}
-
-	urlHash, err := app.newShortEncode(key)
+func (app *App) saveDocument(preDoc *engine.UserDocumentData) ([]byte, error) {
+	doc, err := app.engine.SaveDocument(preDoc)
 	if err != nil {
 		return nil, err
 	}
-
-	ropt := &md.Options{DisableShortcodes: !formData.EnableShortcodes}
-	err = app.saveRenderToCache(formData.TextData, urlHash, ropt)
+	docID, err := app.createDocID(doc)
 	if err != nil {
 		return nil, err
 	}
-
-	localURL := bytes.NewBuffer([]byte("local://"))
-	localURL.Write(key)
-	err = app.urlHashStore.Save(urlHash, localURL.Bytes())
-	if err != nil {
-		return nil, DBError{err}
-	}
-
-	return urlHash, nil
+	return docID, nil
 }
 
-func (app *App) parseURL(rawurl string) (*url.URL, error) {
-	pageURL, err := url.Parse(rawurl)
-	if err == nil && pageURL.Scheme == "" {
-		pageURL, err = url.ParseRequestURI("http://" + rawurl)
-	}
+func (app *App) getDocument(docID []byte) (engine.DocumentRender, error) {
+	key, err := app.docIDMapping.Load(docID)
 	if err != nil {
 		return nil, err
 	}
-
-	if pageURL.Scheme != "http" && pageURL.Scheme != "https" {
-		return nil, fmt.Errorf("Ursupported scheme for %v", pageURL)
+	if key == nil {
+		return nil, nil
 	}
-	return pageURL, err
+	return app.engine.LoadDocumentRender(key)
 }
 
-func newStaticFs(localPath *string) http.FileSystem {
-	var statikFS http.FileSystem
-
-	if localPath != nil {
-		log.Printf("[INFO] use assets from local directory %q", *localPath)
-		statikFS = http.Dir(*localPath)
-	} else {
-		log.Printf("[INFO] use assets embedded to binary")
-		var err error
-		statikFS, err = fs.New()
-		if err != nil {
-			log.Fatalf("[ERROR] no embedded assets loaded, %s", err)
-			return nil
-		}
+func newStatikFs() http.FileSystem {
+	log.Printf("[INFO] use assets embedded to binary")
+	statikFS, err := fs.New()
+	if err != nil {
+		log.Fatalf("[ERROR] no embedded assets loaded, %s", err)
+		return nil
 	}
+	return statikFS
+}
+
+func newLocalFs(localPath string) http.FileSystem {
+	log.Printf("[INFO] use assets from local directory %q", localPath)
+	statikFS := http.Dir(localPath)
 	return statikFS
 }

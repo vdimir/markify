@@ -11,5 +11,6 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/yuin/goldmark v1.1.22
 	go.etcd.io/bbolt v1.3.3
+	go.mongodb.org/mongo-driver v1.3.0
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 )

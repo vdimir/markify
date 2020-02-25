@@ -2,8 +2,6 @@ package util
 
 import (
 	"crypto/sha256"
-	"encoding/binary"
-	"time"
 
 	"github.com/rs/xid"
 )
@@ -21,13 +19,11 @@ const alphabetSize = byte(len(hashAlphabet))
 // 	}
 // }
 
-// BaseHashEncode hash string and encode with base58
-func BaseHashEncode(raw []byte, n int) ([]byte, int64) {
+// Base58UID hash string and encode with base58
+func Base58UID(n int) []byte {
 	hs := sha256.New224()
 
-	hs.Write(raw)
-	seed := time.Now().UnixNano()
-	binary.Write(hs, binary.LittleEndian, seed)
+	hs.Write(GetUID())
 
 	maxLen := hs.Size()
 	if n > maxLen {
@@ -43,7 +39,7 @@ func BaseHashEncode(raw []byte, n int) ([]byte, int64) {
 		}
 		res[i] = c
 	}
-	return res, seed
+	return res
 }
 
 // GetUID retunst new unique id (xid)

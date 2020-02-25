@@ -15,10 +15,10 @@
         <h1>{{ .Title }}</h1>
     </header>
     <div class="form-block url-block">
-        {{- if .HeaderMsg }}<h1>{{ .HeaderMsg }}</h1>{{ end }}
-        {{- if .MainMsg }}<p>{{ .MainMsg }}</p>{{ end }}
+        {{- if .Msg }}<p>{{ .Msg }}</p>{{ end }}
         <form class="url-form" action="/link" method="post" autocomplete="off">
-            <input type="text" name="url" placeholder="Paste URL to raw markdown" autofocus>
+            <input type="hidden" name="type" value="url">
+            <input type="text" name="data" placeholder="Paste URL to raw markdown" autofocus>{{ .InitialText }}</input>
             <button type="submit"><i class="fa fa-arrow-right" aria-hidden="true"></i></button>
             <span class="light-text">or press Enter to <a href="/compose">paste text</a></span>
             <br>
