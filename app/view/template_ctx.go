@@ -14,8 +14,6 @@ const (
 	StatusTpl
 	// URLPromptTpl template "url_prompt.html"
 	URLPromptTpl
-	// Number of templates
-	_TplCount
 )
 
 var templateNames = map[PageType]string{

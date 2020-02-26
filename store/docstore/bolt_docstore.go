@@ -40,6 +40,13 @@ func NewBoltDocStore(dbPath string) DocStore {
 
 // SaveDocument save new document and return key
 func (s *boltDocStore) SaveDocument(doc *MdDocument) (DBKey, error) {
+	if doc.CreationTime == 0 || doc.UpdateTime == 0 {
+		return nil, errors.Errorf("fields CreationTime and UpdateTime required")
+	}
+	if doc.Text == nil {
+		return nil, errors.Errorf("empty text")
+	}
+
 	key := util.GetUID()
 	blob, err := bson.Marshal(doc)
 	if err != nil {
