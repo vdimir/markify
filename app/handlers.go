@@ -13,6 +13,8 @@ import (
 	"github.com/vdimir/markify/app/view"
 )
 
+const defaultTitle = "markify"
+
 // Routes setup
 func (app *App) Routes() *chi.Mux {
 	r := chi.NewRouter()
@@ -25,7 +27,7 @@ func (app *App) Routes() *chi.Mux {
 	r.Use(loggerMiddleware)
 
 	r.Use(middleware.StripSlashes)
-	// r.Use(middleware.Recoverer)
+	r.Use(middleware.Recoverer)
 
 	app.addFileServer(r, "/assets")
 	app.addFixedPages(r)
@@ -59,14 +61,14 @@ func (app *App) handlePageIndex(w http.ResponseWriter, r *http.Request) {
 
 func (app *App) handlePageInputURL(w http.ResponseWriter, r *http.Request) {
 	ctx := &view.URLPromptContext{
-		Title: "markify",
+		Title: defaultTitle,
 	}
 	app.viewTemplate(http.StatusOK, ctx, w)
 }
 
 func (app *App) handlePageTextInput(w http.ResponseWriter, r *http.Request) {
 	ctx := &view.EditorContext{
-		Title: "markify",
+		Title: defaultTitle,
 	}
 	app.viewTemplate(http.StatusOK, ctx, w)
 }
@@ -74,15 +76,25 @@ func (app *App) handlePageTextInput(w http.ResponseWriter, r *http.Request) {
 func (app *App) handleCreateDocument(w http.ResponseWriter, r *http.Request) {
 	createReq := parseUserInput(r)
 	docID, err := app.saveDocument(createReq)
-	if _, ok := err.(apperr.UserError); ok {
-		ctx := &view.StatusContext{
-			Title:     "markify",
-			HeaderMsg: "Incorrect input",
+	if err != nil {
+		if err, ok := err.(apperr.UserError); ok {
+			var returnToPageCtx view.TemplateContext
+			if createReq.IsURL {
+				returnToPageCtx = &view.URLPromptContext{
+					Title: fmt.Sprintf("%s :(", defaultTitle),
+					Msg:   err.String(),
+				}
+			} else {
+				returnToPageCtx = &view.EditorContext{
+					Title:       fmt.Sprintf("%s :(", defaultTitle),
+					Msg:         err.String(),
+					InitialText: string(createReq.Data),
+				}
+			}
+			app.viewTemplate(http.StatusBadRequest, returnToPageCtx, w)
+		} else {
+			app.serverError(err, w)
 		}
-		app.viewTemplate(http.StatusBadRequest, ctx, w)
-
-	} else {
-		app.serverError(err, w)
 	}
 	http.Redirect(w, r, fmt.Sprintf("/p/%s", docID), 302)
 }
@@ -102,7 +114,8 @@ func (app *App) handlePagePreview(w http.ResponseWriter, r *http.Request) {
 	createReq := parseUserInput(r)
 	doc, err := app.engine.CreateDocument(createReq)
 	if err != nil {
-		panic(err) // TODO
+		app.serverError(err, w)
+		return
 	}
 	app.viewDocument(doc, "Preview", w)
 }

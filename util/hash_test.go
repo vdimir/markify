@@ -8,12 +8,12 @@ import (
 
 func TestURLHash(t *testing.T) {
 	assert := assert.New(t)
-	h, _ := BaseHashEncode([]byte("foobarbiz"), 2)
+	h := Base58UID(2)
 	assert.Equal(len(h), 2)
 
-	h1, _ := BaseHashEncode([]byte("foobarbiz"), 18)
-	h2, _ := BaseHashEncode([]byte("xxx"), 18)
-	h3, _ := BaseHashEncode([]byte("foobarbiz"), 18)
+	h1 := Base58UID(18)
+	h2 := Base58UID(18)
+	h3 := Base58UID(18)
 	assert.Equal(len(h1), 18)
 	assert.Equal(len(h2), 18)
 	assert.Equal(len(h3), 18)

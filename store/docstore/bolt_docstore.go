@@ -3,6 +3,11 @@ package docstore
 import (
 	"path"
 
+	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/pkg/errors"
+	"github.com/vdimir/markify/util"
+
 	"github.com/vdimir/markify/store"
 	"github.com/vdimir/markify/store/kvstore"
 	"go.etcd.io/bbolt"
@@ -11,11 +16,12 @@ import (
 var metaBucketName = []byte("__meta__")
 var textBucketName = []byte("__text__")
 
-type BoltDocStore struct {
+type boltDocStore struct {
 	docStorage    *bbolt.DB
 	renderStorage kvstore.Store
 }
 
+// NewBoltDocStore create boltDocStore. Database files  store in dbPath folder
 func NewBoltDocStore(dbPath string) DocStore {
 	renderStorage, err := kvstore.NewBoltStorage(path.Join(dbPath, "render.db"), bbolt.Options{})
 	if err != nil {
@@ -26,26 +32,62 @@ func NewBoltDocStore(dbPath string) DocStore {
 	if err != nil {
 		panic(err)
 	}
-	return &BoltDocStore{
+	return &boltDocStore{
 		docStorage:    docStorage,
 		renderStorage: renderStorage,
 	}
 }
 
 // SaveDocument save new document and return key
-func (s *BoltDocStore) SaveDocument(doc *MdDocument) (DBKey, error) {
-	panic("")
+func (s *boltDocStore) SaveDocument(doc *MdDocument) (DBKey, error) {
+	key := util.GetUID()
+	blob, err := bson.Marshal(doc)
+	if err != nil {
+		return nil, errors.Wrapf(err, "marshal error in save")
+	}
+	err = s.docStorage.Update(func(tx *bbolt.Tx) error {
+		err := tx.Bucket(metaBucketName).Put(key, blob)
+		if err != nil {
+			return errors.Wrapf(err, "cannot put data to bolt")
+		}
+		return nil
+	})
+	return key, err
 }
 
-func (s *BoltDocStore) LoadDocument(key DBKey, parts DocProjection, doc *MdDocument) error {
-	panic("")
+// LoadDocument load specified document parts from database
+func (s *boltDocStore) LoadDocument(key DBKey, parts DocProjection, doc *MdDocument) error {
+	err := s.docStorage.View(func(tx *bbolt.Tx) error {
+		blob := tx.Bucket(metaBucketName).Get(key)
+		if blob == nil {
+			return errors.Errorf("key %v not found", key)
+		}
+		err := bson.Unmarshal(blob, doc)
+		if err != nil {
+			return errors.Wrapf(err, "unmarshal error in load")
+		}
+		return nil
+	})
+	return err
 }
 
-func (s *BoltDocStore) UpdateDocument(key DBKey, parts DocProjection, doc *MdDocument) error {
-	panic("")
+// UpdateDocument updates specified document parts in database
+func (s *boltDocStore) UpdateDocument(key DBKey, parts DocProjection, doc *MdDocument) error {
+	blob, err := bson.Marshal(doc)
+	if err != nil {
+		return err
+	}
+	err = s.docStorage.Update(func(tx *bbolt.Tx) error {
+		err := tx.Bucket(metaBucketName).Put(key, blob)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
 }
 
-func (s *BoltDocStore) Close() error {
+func (s *boltDocStore) Close() error {
 	var err error
 	err = s.docStorage.Close()
 	if err != nil {

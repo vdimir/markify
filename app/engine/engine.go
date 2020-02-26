@@ -4,6 +4,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/vdimir/markify/app/apperr"
+
 	"github.com/pkg/errors"
 	"github.com/vdimir/markify/fetch"
 	md "github.com/vdimir/markify/mdrender"
@@ -33,7 +35,7 @@ func (eng *DocEngine) SaveDocument(preDoc *UserDocumentData) (DocumentFullSaved,
 	}
 	key, err := eng.docStore.SaveDocument(doc)
 	if err != nil {
-		return nil, err
+		return nil, apperr.DBError{err}
 	}
 	return &documentWrapper{
 		dbDoc: doc,
@@ -42,7 +44,7 @@ func (eng *DocEngine) SaveDocument(preDoc *UserDocumentData) (DocumentFullSaved,
 }
 
 func (eng *DocEngine) LoadDocumentRender(key []byte) (DocumentRender, error) {
-	var dbDoc *docstore.MdDocument
+	var dbDoc = &docstore.MdDocument{}
 	err := eng.docStore.LoadDocument(key, docstore.ProjMeta|docstore.ProjRender, dbDoc)
 	if err != nil {
 		return nil, err
@@ -60,20 +62,32 @@ func (eng *DocEngine) createDocument(preDoc *UserDocumentData) (*docstore.MdDocu
 	var err error
 	var srcURL *url.URL
 	if preDoc.IsURL {
-		srcURL, textData, err = eng.downloadDocument(string(preDoc.Data))
+		srcURL, err = parseURL(string(preDoc.Data))
+		if err != nil {
+			return nil, apperr.WrapfUserError(err, "Incorrect URL")
+		}
+		textData, err = downloadMd(srcURL, eng.fetcher)
+		if err != nil {
+			return nil, apperr.WrapfUserError(err, "Cannot retrieve data from URL")
+		}
+
 	} else {
 		textData = preDoc.Data
 	}
 
 	curTime := time.Now()
 	doc := &docstore.MdDocument{
-		SrcURL:       srcURL,
-		Text:         textData,
-		CreationTime: curTime,
-		UpdateTime:   curTime,
-		Params: docstore.MdDocumentParams{
-			EnableShortcodes: preDoc.EnableShortcodes,
+		MdMeta: docstore.MdMeta{
+			CreationTime: curTime.Second(),
+			UpdateTime:   curTime.Second(),
+			MdDocumentParams: docstore.MdDocumentParams{
+				EnableShortcodes: preDoc.EnableShortcodes,
+			},
 		},
+		Text: textData,
+	}
+	if srcURL != nil {
+		doc.SrcURL = []byte(srcURL.String())
 	}
 
 	err = eng.renderDocument(doc)
@@ -83,22 +97,8 @@ func (eng *DocEngine) createDocument(preDoc *UserDocumentData) (*docstore.MdDocu
 	return doc, nil
 }
 
-func (eng *DocEngine) downloadDocument(rawurl string) (*url.URL, []byte, error) {
-	srcURL, err := parseURL(rawurl)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var data []byte
-	data, err = downloadMd(srcURL, eng.fetcher)
-	if err != nil {
-		return nil, nil, err
-	}
-	return srcURL, data, nil
-}
-
 func (eng *DocEngine) renderDocument(doc *docstore.MdDocument) error {
-	ropts := &md.Options{DisableShortcodes: !doc.Params.EnableShortcodes}
+	ropts := &md.Options{DisableShortcodes: !doc.EnableShortcodes}
 	renderHTMLBuf, err := eng.mdrender.Render(doc.Text, ropts)
 	if err != nil {
 		return errors.Wrap(err, "page render error")

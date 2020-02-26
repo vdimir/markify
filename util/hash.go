@@ -12,14 +12,7 @@ import (
 const hashAlphabet = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
 const alphabetSize = byte(len(hashAlphabet))
 
-// func Base58(raw []byte) []byte {
-// 	res := make([]byte, 3*len(raw))
-// 	for _, b := range raw {
-// 		c := hashAlphabet[b%alphabetSize]
-// 	}
-// }
-
-// Base58UID hash string and encode with base58
+// Base58UID random base58 identifier
 func Base58UID(n int) []byte {
 	hs := sha256.New224()
 

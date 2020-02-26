@@ -24,17 +24,20 @@ const defaultURLHashLen = 7
 
 // Config contains application configuration
 type Config struct {
-	ServerAddrHost string
-	ServerPort     uint16
-	Debug          bool
-	AssetsPrefix   string
-	DBPath         string
-	StatusText     string
+	Debug        bool
+	AssetsPrefix string
+	DBPath       string
+	StatusText   string
+}
+
+// TestConfig contains application configuration used for testing
+type TestConfig struct {
+	fetcher fetch.Fetcher
 }
 
 // App provides high level interface to app functions for server
 type App struct {
-	cfg          Config
+	cfg          *Config
 	engine       *engine.DocEngine
 	docIDMapping kvstore.Store
 	staticFs     http.FileSystem
@@ -43,7 +46,7 @@ type App struct {
 }
 
 // NewApp create new App instance
-func NewApp(cfg Config) (*App, error) {
+func NewApp(cfg *Config, tcgf *TestConfig) (*App, error) {
 	docIDMapping, err := kvstore.NewBoltStorage(path.Join(cfg.DBPath, "docid.db"), bbolt.Options{})
 	if err != nil {
 		return nil, err
@@ -53,7 +56,13 @@ func NewApp(cfg Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	docEngine := engine.NewDocEngine(cfg.DBPath, mdRen, fetch.NewFetcher())
+	var fetcher fetch.Fetcher
+	if tcgf != nil && tcgf.fetcher != nil {
+		fetcher = tcgf.fetcher
+	} else {
+		fetcher = fetch.NewFetcher()
+	}
+	docEngine := engine.NewDocEngine(cfg.DBPath, mdRen, fetcher)
 
 	var staticFs http.FileSystem
 	if cfg.Debug {
@@ -92,7 +101,7 @@ func (app *App) concatTitle(docTitle string, customTitle string) string {
 	case customTitle != "":
 		return customTitle
 	}
-	return "markify"
+	return defaultTitle
 }
 
 func (app *App) viewDocument(doc engine.DocumentRender, title string, w http.ResponseWriter) {
@@ -127,7 +136,7 @@ func (app *App) saveDocument(preDoc *engine.UserDocumentData) ([]byte, error) {
 	}
 	docID, err := app.createDocID(doc)
 	if err != nil {
-		return nil, err
+		return nil, apperr.DBError{err}
 	}
 	return docID, nil
 }

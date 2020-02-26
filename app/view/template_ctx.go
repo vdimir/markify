@@ -12,7 +12,7 @@ const (
 	PageTpl
 	// StatusTpl template "status.html"
 	StatusTpl
-	// URLPromptTpl template "url_template.html"
+	// URLPromptTpl template "url_prompt.html"
 	URLPromptTpl
 	// Number of templates
 	_TplCount
@@ -22,7 +22,7 @@ var templateNames = map[PageType]string{
 	EditorTpl:    "editor.html",
 	PageTpl:      "page.html",
 	StatusTpl:    "status.html",
-	URLPromptTpl: "url_template.html",
+	URLPromptTpl: "url_prompt.html",
 }
 
 // TemplateContext provides context for template

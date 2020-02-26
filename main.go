@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/vdimir/markify/app"
@@ -31,20 +30,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	appServer, err := app.NewApp(app.Config{
-		ServerAddrHost: opts.Hostname,
-		ServerPort:     opts.Port,
-		Debug:          opts.Debug,
-		AssetsPrefix:   "assets",
-		RenderStore:    path.Join(opts.DataDir, "render.db"),
-		PageMetaStore:  path.Join(opts.DataDir, "page_meta.db"),
-		TextStore:      path.Join(opts.DataDir, "mdtext.db"),
-		StatusText:     fmt.Sprintf(`{"revision":"%s"}`, revision),
-	})
+	appServer, err := app.NewApp(&app.Config{
+		Debug:        opts.Debug,
+		AssetsPrefix: "assets",
+		DBPath:       opts.DataDir,
+		StatusText:   fmt.Sprintf(`{"revision":"%s"}`, revision),
+	}, nil)
 
 	if err != nil {
 		panic(err)
 	}
 
-	appServer.StartServer()
+	appServer.StartServer(opts.Hostname, opts.Port)
 }

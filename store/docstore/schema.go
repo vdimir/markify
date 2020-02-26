@@ -1,10 +1,5 @@
 package docstore
 
-import (
-	"net/url"
-	"time"
-)
-
 type DBKey []byte
 
 type DocProjection int32
@@ -20,14 +15,17 @@ type MdDocumentParams struct {
 	EnableShortcodes bool
 }
 
+type MdMeta struct {
+	SrcURL           []byte `bson:",omitempty"`
+	Title            []byte `bson:",omitempty"`
+	OwnerID          []byte `bson:",omitempty"`
+	CreationTime     int    `bson:",omitempty"`
+	UpdateTime       int    `bson:",omitempty"`
+	MdDocumentParams `bson:",omitempty,inline"`
+}
+
 type MdDocument struct {
-	Key          DBKey            // *
-	SrcURL       *url.URL         // *
-	Title        []byte           // *
-	OwnerID      []byte           // * Meta
-	CreationTime time.Time        // *
-	UpdateTime   time.Time        // *
-	Params       MdDocumentParams // *
-	Text         []byte           // Text
-	RenderedHTML []byte           // Render
+	MdMeta
+	Text         []byte `bson:",omitempty"`
+	RenderedHTML []byte `bson:",omitempty"`
 }

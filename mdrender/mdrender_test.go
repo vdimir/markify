@@ -14,7 +14,7 @@ import (
 	"github.com/vdimir/markify/testutil"
 )
 
-const testDataPath = "../../testdata"
+const testDataPath = "../testdata"
 
 func TestRenderSimple(t *testing.T) {
 	mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))

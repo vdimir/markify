@@ -22,7 +22,7 @@ import (
 const fixedPagesPrefixDir = "/static_pages"
 
 // StartServer listen incoming requsets and hanle it
-func (app *App) StartServer(host string, port int16) {
+func (app *App) StartServer(host string, port uint16) {
 
 	serverURL := host
 	if serverURL == "" {
@@ -95,7 +95,10 @@ func (app *App) addFixedPages(r chi.Router) {
 			f, _ := app.staticFs.Open(filePath)
 			data, _ := ioutil.ReadAll(f)
 
-			doc, _ := app.engine.CreateDocument(engine.NewUserDocumentData(data))
+			doc, err := app.engine.CreateDocument(engine.NewUserDocumentData(data))
+			if err != nil {
+				panic(err)
+			}
 			app.viewDocument(doc, "Debug", w)
 		}
 		return handler
