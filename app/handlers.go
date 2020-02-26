@@ -95,6 +95,7 @@ func (app *App) handleCreateDocument(w http.ResponseWriter, r *http.Request) {
 		} else {
 			app.serverError(err, w)
 		}
+		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/p/%s", docID), 302)
 }

@@ -43,7 +43,7 @@ func (s *boltDocStore) SaveDocument(doc *MdDocument) (DBKey, error) {
 	if doc.CreationTime == 0 || doc.UpdateTime == 0 {
 		return nil, errors.Errorf("fields CreationTime and UpdateTime required")
 	}
-	if doc.Text == nil {
+	if doc.Text == nil || len(doc.Text) == 0 {
 		return nil, errors.Errorf("empty text")
 	}
 

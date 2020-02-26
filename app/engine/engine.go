@@ -61,6 +61,11 @@ func (eng *DocEngine) CreateDocument(preDoc *UserDocumentData) (DocumentFull, er
 }
 
 func (eng *DocEngine) createDocument(preDoc *UserDocumentData) (*docstore.MdDocument, error) {
+	if preDoc.Data == nil || len(preDoc.Data) == 0 {
+		err := errors.Errorf("empty data")
+		return nil, apperr.WrapfUserError(err, "Data in empty. Type something")
+	}
+
 	var textData []byte
 	var err error
 	var srcURL *url.URL
