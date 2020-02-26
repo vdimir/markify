@@ -124,7 +124,7 @@ func (app *App) createDocID(doc engine.DocumentSaved) ([]byte, error) {
 	newID := util.Base58UID(defaultURLHashLen)
 	err := app.docIDMapping.Save(newID, doc.Key())
 	if err != nil {
-		return nil, apperr.DBError{err}
+		return nil, apperr.DBError{Inner: err}
 	}
 	return newID, nil
 }
@@ -136,7 +136,7 @@ func (app *App) saveDocument(preDoc *engine.UserDocumentData) ([]byte, error) {
 	}
 	docID, err := app.createDocID(doc)
 	if err != nil {
-		return nil, apperr.DBError{err}
+		return nil, apperr.DBError{Inner: err}
 	}
 	return docID, nil
 }

@@ -28,6 +28,7 @@ func NewDocEngine(dbPath string, mdrender *md.Render, fetcher fetch.Fetcher) *Do
 	}
 }
 
+// SaveDocument process user input data and save document to database
 func (eng *DocEngine) SaveDocument(preDoc *UserDocumentData) (DocumentFullSaved, error) {
 	doc, err := eng.createDocument(preDoc)
 	if err != nil {
@@ -35,7 +36,7 @@ func (eng *DocEngine) SaveDocument(preDoc *UserDocumentData) (DocumentFullSaved,
 	}
 	key, err := eng.docStore.SaveDocument(doc)
 	if err != nil {
-		return nil, apperr.DBError{err}
+		return nil, apperr.DBError{Inner: err}
 	}
 	return &documentWrapper{
 		dbDoc: doc,
@@ -43,6 +44,7 @@ func (eng *DocEngine) SaveDocument(preDoc *UserDocumentData) (DocumentFullSaved,
 	}, nil
 }
 
+// LoadDocumentRender return HTML for document with key
 func (eng *DocEngine) LoadDocumentRender(key []byte) (DocumentRender, error) {
 	var dbDoc = &docstore.MdDocument{}
 	err := eng.docStore.LoadDocument(key, docstore.ProjMeta|docstore.ProjRender, dbDoc)
@@ -52,6 +54,7 @@ func (eng *DocEngine) LoadDocumentRender(key []byte) (DocumentRender, error) {
 	return &documentWrapper{nil, dbDoc}, err
 }
 
+// CreateDocument process user input data and resturs document
 func (eng *DocEngine) CreateDocument(preDoc *UserDocumentData) (DocumentFull, error) {
 	doc, err := eng.createDocument(preDoc)
 	return &documentWrapper{nil, doc}, err
