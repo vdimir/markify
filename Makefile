@@ -14,7 +14,7 @@ build: test generate
 	go build -o ${EXE_NAME} ./
 
 run: generate
-	go run ./
+	go run ./ --host=localhost
 
 run-debug: generate
 	go run ./ --debug --host=localhost
