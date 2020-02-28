@@ -27,8 +27,8 @@ type MdMeta struct {
 	SrcURL           []byte `bson:",omitempty"`
 	Title            []byte `bson:",omitempty"`
 	OwnerID          []byte `bson:",omitempty"`
-	CreationTime     int    `bson:",omitempty"`
-	UpdateTime       int    `bson:",omitempty"`
+	CreationTime     int64  `bson:",omitempty"`
+	UpdateTime       int64  `bson:",omitempty"`
 	MdDocumentParams `bson:",omitempty,inline"`
 }
 

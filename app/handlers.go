@@ -77,17 +77,17 @@ func (app *App) handleCreateDocument(w http.ResponseWriter, r *http.Request) {
 	createReq := parseUserInput(r)
 	docID, err := app.saveDocument(createReq)
 	if err != nil {
-		if err, ok := err.(apperr.UserError); ok {
+		if errUser, ok := err.(apperr.UserError); ok {
 			var returnToPageCtx view.TemplateContext
 			if createReq.IsURL {
 				returnToPageCtx = &view.URLPromptContext{
 					Title: fmt.Sprintf("%s :(", defaultTitle),
-					Msg:   err.String(),
+					Msg:   errUser.String(),
 				}
 			} else {
 				returnToPageCtx = &view.EditorContext{
 					Title:       fmt.Sprintf("%s :(", defaultTitle),
-					Msg:         err.String(),
+					Msg:         errUser.String(),
 					InitialText: string(createReq.Data),
 				}
 			}

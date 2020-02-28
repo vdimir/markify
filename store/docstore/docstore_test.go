@@ -28,8 +28,8 @@ func TestBoltDocstoreSaveEmpty(t *testing.T) {
 
 	_, err = s.SaveDocument(&MdDocument{
 		MdMeta: MdMeta{
-			CreationTime: now().Second(),
-			UpdateTime:   now().Second(),
+			CreationTime: now().Unix(),
+			UpdateTime:   now().Unix(),
 		},
 	})
 	assert.Error(t, err)

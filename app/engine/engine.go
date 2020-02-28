@@ -86,8 +86,8 @@ func (eng *DocEngine) createDocument(preDoc *UserDocumentData) (*docstore.MdDocu
 	curTime := time.Now()
 	doc := &docstore.MdDocument{
 		MdMeta: docstore.MdMeta{
-			CreationTime: curTime.Second(),
-			UpdateTime:   curTime.Second(),
+			CreationTime: curTime.Unix(),
+			UpdateTime:   curTime.Unix(),
 			MdDocumentParams: docstore.MdDocumentParams{
 				EnableShortcodes: preDoc.EnableShortcodes,
 			},

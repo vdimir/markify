@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"path"
 
 	"github.com/vdimir/markify/store/kvstore"
@@ -47,6 +48,9 @@ type App struct {
 
 // NewApp create new App instance
 func NewApp(cfg *Config, tcgf *TestConfig) (*App, error) {
+	if err := os.MkdirAll(cfg.DBPath, os.ModePerm); err != nil && !os.IsExist(err) {
+		return nil, err
+	}
 	docIDMapping, err := kvstore.NewBoltStorage(path.Join(cfg.DBPath, "docid.db"), bbolt.Options{})
 	if err != nil {
 		return nil, err

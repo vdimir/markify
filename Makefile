@@ -14,10 +14,10 @@ build: test generate
 	go build -o ${EXE_NAME} ./
 
 run: generate
-	go run ./ --host=localhost
+	go run ./ --host=localhost --data ./var
 
 run-debug: generate
-	go run ./ --debug --host=localhost
+	go run ./ --debug --host=localhost --data ./var
 
 clean:
 	rm -f ${EXE_NAME}
