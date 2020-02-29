@@ -30,9 +30,8 @@ type DocumentText interface {
 
 // DocumentFull contains both raw text and HTML render
 type DocumentFull interface {
-	Document
-	HTMLBody() template.HTML
-	MdText() []byte
+	DocumentRender
+	DocumentText
 }
 
 // DocumentSaved contains key in database
