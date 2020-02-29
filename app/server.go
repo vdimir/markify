@@ -2,12 +2,14 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/vdimir/markify/app/engine"
 
@@ -21,7 +23,7 @@ import (
 
 const fixedPagesPrefixDir = "/static_pages"
 
-// StartServer listen incoming requsets and hanle it
+// StartServer listen incoming requsets. Blocking function
 func (app *App) StartServer(host string, port uint16) {
 
 	serverURL := host
@@ -29,16 +31,31 @@ func (app *App) StartServer(host string, port uint16) {
 		serverURL = "localhost"
 	}
 	log.Printf("[INFO] starting server at http://%s:%d\n", serverURL, port)
-
+	app.Addr = fmt.Sprintf("%s:%d", host, port)
 	app.httpServer = &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", host, port),
+		Addr:    app.Addr,
 		Handler: app.Routes(),
 	}
 
 	err := app.httpServer.ListenAndServe()
 
-	if err != nil {
-		panic(errors.Wrap(err, "cannot start server"))
+	if err != nil && err != http.ErrServerClosed {
+		log.Printf("[ERROR] server listening error (http://%s:%d)\n", serverURL, port)
+	}
+	log.Printf("[INFO] server stopped")
+}
+
+// Shutdown stop server
+func (app *App) Shutdown() {
+	log.Print("[WARN] shutdown server")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	if app.httpServer != nil {
+		if err := app.httpServer.Shutdown(ctx); err != nil {
+			log.Printf("[WARN] http shutdown error, %s", err)
+		}
+		log.Print("[DEBUG] shutdown http server completed")
 	}
 }
 

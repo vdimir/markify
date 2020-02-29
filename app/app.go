@@ -44,6 +44,7 @@ type App struct {
 	staticFs     http.FileSystem
 	htmlView     view.HTMLPageRender
 	httpServer   *http.Server
+	Addr         string
 }
 
 // NewApp create new App instance

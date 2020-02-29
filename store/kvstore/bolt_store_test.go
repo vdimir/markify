@@ -11,12 +11,18 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+func closeCheck(t *testing.T, s Store) {
+	assert.NoError(t, s.Close())
+}
+
 func TestBoltStore(t *testing.T) {
 	tmpPath, cleanup := testutil.GetTempFolder(t, "bolt_store")
 	defer cleanup()
 
 	boltPath := path.Join(tmpPath, "bolt.db")
 	keyStore, err := NewBoltStorage(boltPath, bolt.Options{})
+	defer closeCheck(t, keyStore)
+
 	require.NoError(t, err)
 
 	err = keyStore.Save([]byte("abc"), []byte("123"))
@@ -59,6 +65,7 @@ func TestBoltNewEntry(t *testing.T) {
 	boltPath := path.Join(tmpPath, "bolt.db")
 	keyStore, err := NewBoltStorage(boltPath, bolt.Options{})
 	require.NoError(t, err)
+	defer closeCheck(t, keyStore)
 
 	k1, err := keyStore.NewEntry([]byte("abc"))
 	assert.NoError(t, err)

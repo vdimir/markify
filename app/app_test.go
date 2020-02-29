@@ -1,9 +1,6 @@
 package app
 
 import (
-	"fmt"
-	"math/rand"
-	"net"
 	"path"
 	"regexp"
 	"testing"
@@ -18,31 +15,17 @@ import (
 
 const testDataPath = "../testdata"
 
-func chooseRandomUnusedPort() (port uint16) {
-	for i := 0; i < 10; i++ {
-		port = 40000 + uint16(rand.Int31n(10000))
-		if ln, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port)); err == nil {
-			_ = ln.Close()
-			return port
-		}
-	}
-	return 0
-}
-
 func createNewTestApp(t *testing.T, tc *TestConfig) (tapp *App, teardown func()) {
-	port := chooseRandomUnusedPort()
-	require.NotEqual(t, port, 0)
-
-	tmpPath, teardown := testutil.GetTempFolder(t, "test_app")
+	tmpPath, tmpFolderClean := testutil.GetTempFolder(t, "test_app")
 
 	tapp, err := NewApp(&Config{
-		Debug:        true,
+		Debug:        false,
 		AssetsPrefix: "../assets",
 		DBPath:       tmpPath,
 	}, tc)
 	assert.NoError(t, err)
 
-	return tapp, teardown
+	return tapp, tmpFolderClean
 }
 
 func checkURLHash(t *testing.T, urlHash []byte) {
