@@ -99,3 +99,25 @@ func TestNewURLPage(t *testing.T) {
 	assert.Error(err)
 	assert.IsType(apperr.UserError{}, err)
 }
+
+func TestNewTextPage(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+	tc := &TestConfig{
+		fetcher: fetch.NewMock(),
+	}
+
+	tapp, teardown := createNewTestApp(t, tc)
+	defer teardown()
+	require.NotNil(tapp)
+
+	mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
+	key, err := tapp.saveDocument(engine.NewUserDocumentData(mdData))
+	assert.NoError(err)
+
+	doc, err := tapp.getDocument(key)
+	assert.NoError(err)
+	assert.Regexp(regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), doc.HTMLBody())
+	assert.Regexp(regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), doc.HTMLBody())
+	assert.Regexp(regexp.MustCompile("Ok"), doc.HTMLBody())
+}
