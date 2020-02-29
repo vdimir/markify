@@ -17,7 +17,7 @@ RUN export GOPATH=$(go env GOPATH) && \
     echo "Building..." && \
     echo "--- Minify ---" && \
       [[ -x $GOPATH/bin/minify ]] && \
-      $GOPATH/bin/minify ./assets/style.css -o ./assets/style.css || \
+      $GOPATH/bin/minify ./assets/public/style.css -o ./assets/public/style.css || \
       echo "minify not found" && \
     echo "--- Running go generate ---" && \
       go generate ./... && \

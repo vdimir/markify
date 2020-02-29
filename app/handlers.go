@@ -29,7 +29,7 @@ func (app *App) Routes() *chi.Mux {
 	r.Use(middleware.StripSlashes)
 	r.Use(middleware.Recoverer)
 
-	app.addFileServer(r, "/assets")
+	app.addFileServer(r, "public")
 	app.addFixedPages(r)
 
 	r.Get("/ping", app.handlePing)

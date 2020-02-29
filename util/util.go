@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -62,4 +63,19 @@ func GetJSON(path string, v interface{}) error {
 		return errors.Wrapf(err, "cannot decode data from %q", path)
 	}
 	return nil
+}
+
+// AddRoutePrefix adds prefix to request and handle with h handler
+func AddRoutePrefix(prefix string, h http.HandlerFunc) http.Handler {
+	if strings.ContainsAny(prefix, "{}") {
+		panic("prefix path not permit URL parameters slashes.")
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r2 := new(http.Request)
+		*r2 = *r
+		r2.URL = new(url.URL)
+		*r2.URL = *r.URL
+		r2.URL.Path = prefix + r2.URL.Path
+		h.ServeHTTP(w, r2)
+	})
 }

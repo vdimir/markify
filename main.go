@@ -16,7 +16,7 @@ var revision = "local"
 type Opts struct {
 	Hostname string `short:"h" long:"host" required:"false" description:"server host name" env:"SERVER_HOSTNAME"`
 	Port     uint16 `short:"p" long:"port" required:"false" description:"server port" env:"SERVER_PORT" default:"8080"`
-	DataDir  string `short:"d" long:"data" required:"false" description:"path to directory with data" env:"DB_DATA_PATH"`
+	DataDir  string `short:"d" long:"data" required:"false" description:"path to directory with data" env:"DB_DATA_PATH" default:"./"`
 	Debug    bool   `long:"debug" description:"debug mode"`
 }
 

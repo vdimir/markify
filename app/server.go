@@ -135,11 +135,9 @@ func (app *App) addFixedPages(r chi.Router) {
 
 // addFileServer sets up a http.FileServer handler to serve static files
 func (app *App) addFileServer(r chi.Router, path string) {
-	if strings.ContainsAny(path, "{}*") || strings.HasSuffix(path, "/") {
-		panic("FileServer does not permit URL parameters or trailing slashes.")
+	if strings.ContainsAny(path, "{}*/") {
+		panic("FileServer path not permit URL parameters slashes.")
 	}
-
-	r.Get(path, http.RedirectHandler(path+"/", http.StatusMovedPermanently).ServeHTTP)
 
 	webFs := http.FileServer(app.staticFs)
 	fileHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -149,6 +147,7 @@ func (app *App) addFileServer(r chi.Router, path string) {
 		}
 		webFs.ServeHTTP(w, r)
 	})
-	r.Method("GET", path+"/{fileName}", http.StripPrefix(path, fileHandler))
-	r.Method("GET", "/favicon.ico", http.HandlerFunc(webFs.ServeHTTP))
+
+	r.Method("GET", "/"+path+"/{fileName}", fileHandler)
+	r.Method("GET", "/favicon.ico", util.AddRoutePrefix("/public", webFs.ServeHTTP))
 }
