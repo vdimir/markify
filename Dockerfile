@@ -8,14 +8,22 @@ WORKDIR /build
 ENV CGO_ENABLED 0
 
 RUN go get -v -t -d ./... && \
-    go get github.com/rakyll/statik
+    go get github.com/rakyll/statik && \
+    go get github.com/tdewolff/minify/cmd/minify
 
 # RUN go install -v ./...
 
-RUN GOPATH=$(go env GOPATH) go generate ./... && \
-    version="${REVISION_INFO:-unknown}" && \
-    echo "version=$version" && \
-    go build -o markify -ldflags "-X main.revision=${version} -s -w" ./
+RUN export GOPATH=$(go env GOPATH) && \
+    echo "Building..." && \
+    echo "--- Minify ---" && \
+      [[ -x $GOPATH/bin/minify ]] && \
+      $GOPATH/bin/minify ./assets/style.css -o ./assets/style.css || \
+      echo "minify not found" && \
+    echo "--- Running go generate ---" && \
+      go generate ./... && \
+      version="${REVISION_INFO:-unknown}" && \
+    echo "--- Build app version=$version ---" && \
+      go build -o markify -ldflags "-X main.revision=${version} -s -w" ./
 
 RUN go test -timeout=60s ./...
 

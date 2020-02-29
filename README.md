@@ -13,3 +13,25 @@ Features:
 * Supports some handy extensions like Table of Contents, social media embedding and others
 
 Read more at [markify.dev/about](https://markify.dev/about)
+
+## Development
+
+### Build & Run
+
+Build dockerized app and run:
+```
+docker-compose up --build
+```
+Tests checked in docker build.
+
+Run naively on machine (golang installed required):
+```
+make run # approximately go run ./
+# or:
+make run-debug # with --debug flag to reload assets on fly
+```
+
+Run tests:
+```
+make test # approximately go test ./...
+```
