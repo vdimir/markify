@@ -40,7 +40,7 @@ func (app *App) StartServer(host string, port uint16) {
 	err := app.httpServer.ListenAndServe()
 
 	if err != nil && err != http.ErrServerClosed {
-		log.Printf("[ERROR] server listening error (http://%s:%d)\n", serverURL, port)
+		log.Printf("[ERROR] server listening error: %s (http://%s:%d)\n", err, serverURL, port)
 	}
 	log.Printf("[INFO] server stopped")
 }
@@ -116,7 +116,7 @@ func (app *App) addFixedPages(r chi.Router) {
 			if err != nil {
 				panic(err)
 			}
-			app.viewDocument(doc, "Debug", w)
+			app.viewDocument(doc, "", w)
 		}
 		return handler
 	}

@@ -46,6 +46,7 @@ func (app *App) Routes() *chi.Mux {
 	r.Post("/compose", app.handleCreateDocument)
 
 	r.Post("/preview", app.handlePagePreview)
+	r.Get("/preview", app.notFound)
 	r.NotFound(app.notFound)
 	return r
 }
@@ -125,7 +126,8 @@ func (app *App) handleViewPageDoc(w http.ResponseWriter, r *http.Request) {
 	pageID := chi.URLParam(r, "pageID")
 	doc, err := app.getDocument([]byte(pageID))
 	if err != nil {
-		panic(err) // TODO
+		app.serverError(err, w)
+		return
 	}
 	if doc == nil {
 		app.notFound(w, r)

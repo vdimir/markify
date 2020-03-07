@@ -1,7 +1,12 @@
 package app_test
 
 import (
+	"io"
+	"io/ioutil"
 	"net/http"
+	"net/url"
+	"path"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -11,18 +16,24 @@ import (
 	"github.com/vdimir/markify/testutil"
 )
 
-func createServer(t *testing.T) (*app.App, func()) {
+const testDataPath = "../testdata"
+
+func createServer(t *testing.T, customCfg func(*app.Config)) (*app.App, func()) {
 	port := testutil.ChooseRandomUnusedPort()
 	require.NotEqual(t, port, 0)
 
 	tmpPath, tmpFolderClean := testutil.GetTempFolder(t, "test_app")
 
-	tapp, err := app.NewApp(&app.Config{
+	cfg := &app.Config{
 		Debug:        false,
 		AssetsPrefix: "../assets",
 		DBPath:       tmpPath,
 		StatusText:   `{"status": "ok"}`,
-	}, nil)
+	}
+	if customCfg != nil {
+		customCfg(cfg)
+	}
+	tapp, err := app.NewApp(cfg, nil)
 	require.NoError(t, err)
 
 	go tapp.StartServer("localhost", port)
@@ -46,16 +57,25 @@ func getResp(t *testing.T, path string, expectedStatus int) *http.Response {
 	return resp
 }
 
-func TestServerEndpointsExists(t *testing.T) {
-	tapp, teardown := createServer(t)
-	defer teardown()
-
-	appPath := func(path string) string {
+func createPathHelper(host string) func(path string) string {
+	return func(path string) string {
 		if !strings.HasPrefix(path, "/") {
 			path = "/" + path
 		}
-		return "http://" + tapp.Addr + path
+		return "http://" + host + path
 	}
+}
+
+func mustReadAll(r io.Reader) string {
+	data, _ := ioutil.ReadAll(r)
+	return string(data)
+}
+
+func TestServerEndpointsExists(t *testing.T) {
+	tapp, teardown := createServer(t, nil)
+	defer teardown()
+
+	appPath := createPathHelper(tapp.Addr)
 
 	paths := []string{
 		"/robots.txt",
@@ -63,10 +83,92 @@ func TestServerEndpointsExists(t *testing.T) {
 		"/about",
 		"/info/markdown",
 		"/favicon.ico",
+		"/compose",
+		"/link",
 	}
 	for _, path := range paths {
 		_ = getResp(t, appPath(path), http.StatusOK)
 	}
 
-	// TODO add more checks
+	pathsNotFound := []string{
+		"/public/", "/public",
+		"/assets/", "/assets",
+		"/assets/template/page.html",
+		"/info/",
+	}
+	for _, path := range pathsNotFound {
+		_ = getResp(t, appPath(path), http.StatusNotFound)
+	}
+}
+
+func TestServerDebugMode(t *testing.T) {
+	tappDebug, teardown := createServer(t, func(c *app.Config) {
+		c.Debug = true
+	})
+	defer teardown()
+
+	tappNoDebug, teardown := createServer(t, func(c *app.Config) {
+		c.Debug = false
+	})
+	defer teardown()
+
+	appDebugPath := createPathHelper(tappDebug.Addr)
+	appNoDebugPath := createPathHelper(tappNoDebug.Addr)
+
+	paths := []string{
+		"/robots.txt",
+		"/public/style.css",
+		"/about",
+		"/info/markdown",
+		"/",
+	}
+	for _, path := range paths {
+		respDebug := getResp(t, appDebugPath(path), http.StatusOK)
+		respNoDebug := getResp(t, appNoDebugPath(path), http.StatusOK)
+
+		assert.Equal(t, respDebug.StatusCode, respNoDebug.StatusCode)
+
+		dataDebug, err := ioutil.ReadAll(respDebug.Body)
+		assert.NoError(t, err)
+
+		dataNoDebug, err := ioutil.ReadAll(respNoDebug.Body)
+		assert.NoError(t, err)
+
+		assert.Equal(t, dataDebug, dataNoDebug)
+	}
+}
+
+func TestServerCreatePage(t *testing.T) {
+	tapp, teardown := createServer(t, nil)
+	defer teardown()
+
+	appPath := createPathHelper(tapp.Addr)
+
+	composePage := func(data string) *http.Response {
+		formData := url.Values{
+			"data": {data},
+		}
+		resp, err := http.PostForm(appPath("/compose"), formData)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		return resp
+	}
+
+	var resp *http.Response
+
+	resp, _ = http.PostForm(appPath("/compose"), url.Values{"data": {""}})
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	resp = composePage("foo")
+	assert.Contains(t, mustReadAll(resp.Body), "<p>foo</p>")
+	assert.True(t, strings.HasPrefix(resp.Request.URL.Path, "/p/"))
+
+	mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
+	resp = composePage(string(mdData))
+	respData := mustReadAll(resp.Body)
+	assert.Regexp(t, regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), respData)
+	assert.Regexp(t, regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), respData)
+	assert.Regexp(t, regexp.MustCompile("Ok"), respData)
+	assert.True(t, strings.HasPrefix(resp.Request.URL.Path, "/p/"))
 }
