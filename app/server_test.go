@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"path"
 	"regexp"
@@ -142,6 +143,11 @@ func TestServerCreatePage(t *testing.T) {
 	tapp, teardown := createServer(t, nil)
 	defer teardown()
 
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
+		w.Write(mdData)
+	}))
+
 	appPath := createPathHelper(tapp.Addr)
 
 	composePage := func(data string) *http.Response {
@@ -155,20 +161,52 @@ func TestServerCreatePage(t *testing.T) {
 		return resp
 	}
 
+	linkPage := func(path string) *http.Response {
+		formData := url.Values{
+			"data": {path},
+			"type": {"url"},
+		}
+		resp, err := http.PostForm(appPath("/link"), formData)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		return resp
+	}
+
 	var resp *http.Response
+	{
+		resp, _ = http.PostForm(appPath("/compose"), url.Values{"data": {""}})
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	}
+	savedPagesCases := map[string]*regexp.Regexp{}
+	{
+		resp = composePage("foo")
+		assert.Contains(t, mustReadAll(resp.Body), "<p>foo</p>")
+		assert.True(t, strings.HasPrefix(resp.Request.URL.Path, "/p/"))
+		savedPagesCases[resp.Request.URL.Path] = regexp.MustCompile("foo")
+	}
+	{
+		resp = linkPage(ts.URL)
+		respData := mustReadAll(resp.Body)
+		assert.Regexp(t, regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), respData)
+		assert.True(t, strings.HasPrefix(resp.Request.URL.Path, "/p/"))
+		savedPagesCases[resp.Request.URL.Path] = regexp.MustCompile("Ok")
+	}
+	{
+		mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
+		resp = composePage(string(mdData))
+		respData := mustReadAll(resp.Body)
+		assert.Regexp(t, regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), respData)
+		assert.Regexp(t, regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), respData)
+		assert.Regexp(t, regexp.MustCompile("Ok"), respData)
+		assert.True(t, strings.HasPrefix(resp.Request.URL.Path, "/p/"))
+		savedPagesCases[resp.Request.URL.Path] = regexp.MustCompile("Ok")
+	}
 
-	resp, _ = http.PostForm(appPath("/compose"), url.Values{"data": {""}})
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-
-	resp = composePage("foo")
-	assert.Contains(t, mustReadAll(resp.Body), "<p>foo</p>")
-	assert.True(t, strings.HasPrefix(resp.Request.URL.Path, "/p/"))
-
-	mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
-	resp = composePage(string(mdData))
-	respData := mustReadAll(resp.Body)
-	assert.Regexp(t, regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), respData)
-	assert.Regexp(t, regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), respData)
-	assert.Regexp(t, regexp.MustCompile("Ok"), respData)
-	assert.True(t, strings.HasPrefix(resp.Request.URL.Path, "/p/"))
+	for path, expected := range savedPagesCases {
+		resp, err := http.Get(appPath(path))
+		assert.NoError(t, err)
+		respData := mustReadAll(resp.Body)
+		assert.Regexp(t, expected, respData)
+	}
 }
