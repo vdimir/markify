@@ -1,6 +1,6 @@
 # About
 
-[markify.dev](https://markify.dev) is a simple and minimalistic markdown sharing service.
+[markify.dev](/) is a simple and minimalistic markdown sharing service.
 
 ### Features:
 * Keep clean and simple

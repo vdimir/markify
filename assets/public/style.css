@@ -176,9 +176,9 @@ a:active {
 }
 
 a.plain-link {
-    text-decoration: underline;
+    text-decoration: inherit;
     color: inherit;
-    font-style: italic;
+    font-style: inherit;
 }
 
 a.plain-link:visited {
