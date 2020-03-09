@@ -40,6 +40,7 @@ func ChooseRandomUnusedPort() (port uint16) {
 		port = 40000 + uint16(rand.Int31n(10000))
 		if ln, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port)); err == nil {
 			_ = ln.Close()
+			time.Sleep(time.Millisecond * 10)
 			return port
 		}
 	}
