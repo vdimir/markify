@@ -11,9 +11,7 @@
     <script async defer src="https://buttons.github.io/buttons.js"></script>
 </head>
 <body>
-    <header>
-        <h1><a class="plain-link" href="/about">{{ .Title }}</a></h1>
-    </header>
+    <header>{{ template "title_header" }}</header>
     <div class="form-block text-edit-block">
         {{- if .Msg }}<p>{{ .Msg }}</p>{{ end }}
         <form class="text-edit-form" action="/compose" method="post" autocomplete="off" target="_blank">
@@ -29,7 +27,7 @@
                 <div class="light-text">or <a href="/link">paste link</a></div>
                 <div style="flex-grow: 1;"></div>
                 <div class="light-text"><a href="/about">about</a></div>
-                {{ template "settings" }}
+                {{- template "settings" }}
             </div>
         </form>
     </div>

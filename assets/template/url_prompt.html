@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{{ .Title }}</title>
+    <title>
+        {{- if .Title }}{{ .Title }}{{ else }}markify{{ end }}
+    </title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
@@ -12,7 +14,7 @@
 </head>
 <body>
     <header>
-        <h1><a class="plain-link" href="/about">{{ .Title }}</a></h1>
+        {{ template "title_header" }}
     </header>
     <div class="form-block url-block">
         {{- if .Msg }}<p>{{ .Msg }}</p>{{ end }}
