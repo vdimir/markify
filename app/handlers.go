@@ -116,7 +116,16 @@ func (app *App) handlePagePreview(w http.ResponseWriter, r *http.Request) {
 	createReq := parseUserInput(r)
 	doc, err := app.engine.CreateDocument(createReq)
 	if err != nil {
-		app.serverError(err, w)
+		if errUser, ok := err.(apperr.UserError); ok {
+			ctx := &view.StatusContext{
+				Title:     "markify",
+				HeaderMsg: "markify :(",
+				Msg:       errUser.UserMsg,
+			}
+			app.viewTemplate(http.StatusBadRequest, ctx, w)
+		} else {
+			app.serverError(err, w)
+		}
 		return
 	}
 	app.viewDocument(doc, "Preview", w)
