@@ -103,4 +103,15 @@ func TestNewTextPage(t *testing.T) {
 	assert.Regexp(regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), doc.HTMLBody())
 	assert.Regexp(regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), doc.HTMLBody())
 	assert.Regexp(regexp.MustCompile("Ok"), doc.HTMLBody())
+
+	{
+		key, err := tapp.saveDocument(engine.NewUserDocumentData([]byte("   ")))
+		assert.Error(err)
+		assert.Nil(key)
+	}
+	{
+		key, err := tapp.saveDocument(engine.NewUserDocumentData([]byte("<p>abc</p>\n<div>def</div>")))
+		assert.Error(err)
+		assert.Nil(key)
+	}
 }

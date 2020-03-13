@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bytes"
 	"net/url"
 	"time"
 
@@ -111,6 +112,16 @@ func (eng *DocEngine) renderDocument(doc *docstore.MdDocument) error {
 	if err != nil {
 		return errors.Wrap(err, "page render error")
 	}
+	if renderHTMLBuf.Len() == 0 {
+		return apperr.WrapfUserError(errors.New("empty page rendered"), "Empty content!")
+	}
 	doc.RenderedHTML = renderHTMLBuf.Bytes()
+
+	rawHTMLRender := []byte("<!-- raw HTML omitted -->")
+	isEmptyRawHTML := bytes.Compare(bytes.TrimSpace(doc.RenderedHTML), rawHTMLRender) == 0
+	if isEmptyRawHTML {
+		return apperr.WrapfUserError(errors.New("empty raw HTML page rendered"), "Empty content!")
+	}
+
 	return nil
 }
