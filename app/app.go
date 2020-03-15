@@ -109,10 +109,27 @@ func (app *App) concatTitle(docTitle string, customTitle string) string {
 	return defaultTitle
 }
 
-func (app *App) viewDocument(doc engine.DocumentRender, title string, w http.ResponseWriter) {
+func (app *App) viewDocument(
+	doc engine.DocumentRender,
+	title string,
+	ogURL string,
+	w http.ResponseWriter) {
+
+	var ogInfo *view.OpenGraphInfo
+	if ogURL != "" {
+		ogInfo = &view.OpenGraphInfo{
+			Title: title,
+			Type:  "article",
+			URL:   ogURL,
+			Image: "",
+			// Description: "",
+		}
+	}
+	title = app.concatTitle(doc.Title(), title)
 	docView := &view.PageContext{
-		Title: app.concatTitle(doc.Title(), title),
-		Body:  doc.HTMLBody(),
+		Title:  title,
+		Body:   doc.HTMLBody(),
+		OgInfo: ogInfo,
 	}
 	app.viewTemplate(http.StatusOK, docView, w)
 }

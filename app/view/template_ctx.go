@@ -41,10 +41,20 @@ func (c *EditorContext) Name() string {
 	return templateNames[EditorTpl]
 }
 
+// OpenGraphInfo contain Opengraph metadata
+type OpenGraphInfo struct {
+	Title       string
+	Type        string
+	URL         string
+	Image       string
+	Description string
+}
+
 // PageContext context for page.html
 type PageContext struct {
-	Title string
-	Body  template.HTML
+	Title  string
+	Body   template.HTML
+	OgInfo *OpenGraphInfo
 }
 
 // Name of the page

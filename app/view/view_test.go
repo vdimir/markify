@@ -11,9 +11,7 @@ import (
 
 func TestHTMLTemplateRender(t *testing.T) {
 
-	checlAllRender := func(r HTMLPageRender, pageCtxs []TemplateContext) {
-		assert.Equal(t, len(templateNames), len(pageCtxs))
-
+	checkRender := func(r HTMLPageRender, pageCtxs []TemplateContext) {
 		for _, ctx := range pageCtxs {
 			wr := &bytes.Buffer{}
 			err := r.RenderPage(wr, ctx)
@@ -22,17 +20,22 @@ func TestHTMLTemplateRender(t *testing.T) {
 		}
 	}
 
+	checkAllRender := func(r HTMLPageRender, pageCtxs []TemplateContext) {
+		assert.Equal(t, len(templateNames), len(pageCtxs))
+		checkRender(r, pageCtxs)
+	}
+
 	r, err := NewRender(http.Dir("../../assets"))
 	assert.NoError(t, err)
 
-	checlAllRender(r, []TemplateContext{
+	checkAllRender(r, []TemplateContext{
 		&EditorContext{},
 		&PageContext{},
 		&StatusContext{},
 		&URLPromptContext{},
 	})
 
-	checlAllRender(r, []TemplateContext{
+	checkAllRender(r, []TemplateContext{
 		&EditorContext{
 			Title:       "Title",
 			Msg:         "Msg",
@@ -41,6 +44,13 @@ func TestHTMLTemplateRender(t *testing.T) {
 		&PageContext{
 			Title: "Title",
 			Body:  template.HTML("<h1>Hello</h1>"),
+			OgInfo: &OpenGraphInfo{
+				Title:       "ogtitle",
+				URL:         "http://markify.dev/foobar",
+				Image:       "",
+				Type:        "article",
+				Description: "article description",
+			},
 		},
 		&StatusContext{
 			Title:     "Title",
@@ -51,6 +61,20 @@ func TestHTMLTemplateRender(t *testing.T) {
 			Title:       "Title",
 			Msg:         "Msg",
 			InitialText: "InitialText",
+		},
+	})
+
+	checkRender(r, []TemplateContext{
+		&PageContext{
+			Title: "Title",
+			Body:  template.HTML("<h1>Hello</h1>"),
+			OgInfo: &OpenGraphInfo{
+				Title:       "ogtitle",
+				URL:         "http://markify.dev/foobar",
+				Image:       "",
+				Type:        "article",
+				Description: "article description",
+			},
 		},
 	})
 }

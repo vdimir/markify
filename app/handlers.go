@@ -128,7 +128,7 @@ func (app *App) handlePagePreview(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	app.viewDocument(doc, "Preview", w)
+	app.viewDocument(doc, "Preview", "", w)
 }
 
 func (app *App) handleViewPageDoc(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +142,7 @@ func (app *App) handleViewPageDoc(w http.ResponseWriter, r *http.Request) {
 		app.notFound(w, r)
 		return
 	}
-	app.viewDocument(doc, "", w)
+	app.viewDocument(doc, "", r.URL.Path, w)
 }
 
 func (app *App) notFound(w http.ResponseWriter, r *http.Request) {
