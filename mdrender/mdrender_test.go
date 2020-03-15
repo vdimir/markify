@@ -31,7 +31,7 @@ func TestRelativeImgLink(t *testing.T) {
 	pageURL, err := url.ParseRequestURI("http://aaa.com/foo/bar.md")
 	require.NoError(t, err)
 
-	buf, err := rndr.Render(mdData, &Options{BaseURL: pageURL})
+	buf, _, err := rndr.Render(mdData, &Options{BaseURL: pageURL})
 	assert.NoError(t, err)
 
 	htmlPrs, err := html.Parse(buf)
@@ -161,7 +161,7 @@ func TestDisableShortcode(t *testing.T) {
 	rndr, err := NewRender()
 	require.NoError(t, err)
 
-	buf, err := rndr.Render(mdData, &Options{DisableShortcodes: true})
+	buf, _, err := rndr.Render(mdData, &Options{DisableShortcodes: true})
 	require.NoError(t, err)
 
 	checkContaining(t, buf.Bytes(), expectedSubslices)
@@ -193,13 +193,70 @@ func TestTOCShortcode(t *testing.T) {
 	// TODO generated html correctness
 }
 
+func TestTitleExtractor(t *testing.T) {
+	{
+		mdData := []byte("# header 11")
+
+		rndr, err := NewRender()
+		require.NoError(t, err)
+
+		_, ctx, err := rndr.Render(mdData, nil)
+		require.NoError(t, err)
+		require.Equal(t, &PagePreviewText{"header 11", ""}, ctx.Get(MdTitleKey))
+	}
+	{
+		mdData := []byte("" +
+			"# header 11\n" +
+			"text 123\n" +
+			"456" + "\n\n" +
+			"text 789" + "\n" +
+			"# header 22\n" +
+			"\n")
+
+		rndr, err := NewRender()
+		require.NoError(t, err)
+
+		_, ctx, err := rndr.Render(mdData, nil)
+		require.NoError(t, err)
+		require.Equal(t, &PagePreviewText{"header 11", "text 123 456"}, ctx.Get(MdTitleKey))
+	}
+	{
+		mdData := []byte("" +
+			"text 11\n\n" +
+			"text 22\n\n" +
+			"text 33\n\n" +
+			"\n")
+
+		rndr, err := NewRender()
+		require.NoError(t, err)
+
+		_, ctx, err := rndr.Render(mdData, nil)
+		require.NoError(t, err)
+		require.Equal(t, &PagePreviewText{"", "text 11"}, ctx.Get(MdTitleKey))
+	}
+	{
+		mdData := []byte("" +
+			"# text 11\n\n" +
+			"## text 22\n\n" +
+			"# text 33\n\n" +
+			"\n")
+
+		rndr, err := NewRender()
+		require.NoError(t, err)
+
+		_, ctx, err := rndr.Render(mdData, nil)
+		require.NoError(t, err)
+		require.Equal(t, &PagePreviewText{"text 11", ""}, ctx.Get(MdTitleKey))
+	}
+}
+
 // --- helpers ---
 
 func mustRenderMd(t *testing.T, mdData []byte) []byte {
 	rndr, err := NewRender()
 	require.NoError(t, err)
 
-	buf, err := rndr.Render(mdData, nil)
+	buf, _, err := rndr.Render(mdData, nil)
 	require.NoError(t, err)
 	return buf.Bytes()
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/util"
 )
 
 // Options config for markdown renderer
@@ -40,17 +41,20 @@ func NewRender() (*Render, error) {
 			EmbedGist,
 			TableOfContentsShortcode,
 		),
-		goldmark.WithRendererOptions(),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
+			parser.WithASTTransformers(
+				util.Prioritized(&titleExtractorTransformer{}, 500),
+			),
 		),
+		goldmark.WithRendererOptions(),
 	)
 
 	return &Render{md: md}, nil
 }
 
 // Render markdown to html
-func (r *Render) Render(data []byte, opt *Options) (*bytes.Buffer, error) {
+func (r *Render) Render(data []byte, opt *Options) (*bytes.Buffer, parser.Context, error) {
 	var ctx = parser.NewContext()
 	if opt != nil {
 		opt.fillParserCtx(ctx)
@@ -58,9 +62,8 @@ func (r *Render) Render(data []byte, opt *Options) (*bytes.Buffer, error) {
 
 	var htmlBuf bytes.Buffer
 	if err := r.md.Convert(data, &htmlBuf, parser.WithContext(ctx)); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	// usedShortcodes := ctx.Get(UsedShortcodesKey).(map[string]bool)
 
-	return &htmlBuf, nil
+	return &htmlBuf, ctx, nil
 }

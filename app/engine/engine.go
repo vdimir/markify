@@ -3,6 +3,8 @@ package engine
 import (
 	"bytes"
 	"net/url"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/vdimir/markify/app/apperr"
@@ -12,6 +14,8 @@ import (
 	md "github.com/vdimir/markify/mdrender"
 	"github.com/vdimir/markify/store/docstore"
 )
+
+const maxTitleLen = 50
 
 // DocEngine deals with documents: rendering, saving, etc
 type DocEngine struct {
@@ -106,21 +110,56 @@ func (eng *DocEngine) createDocument(preDoc *UserDocumentData) (*docstore.MdDocu
 	return doc, nil
 }
 
+func isEmptyHTMLRendered(data []byte) bool {
+	if len(data) == 0 {
+		return true
+	}
+	rawHTMLRender := []byte("<!-- raw HTML omitted -->")
+	return bytes.Compare(bytes.TrimSpace(data), rawHTMLRender) == 0
+}
+
+// textToTitle truncate string to n, replace all non-word chars to spaces
+func textToTitle(s string, n int) string {
+	s = strings.TrimSpace(s)
+	spaceRe := regexp.MustCompile("\\s+")
+	s = spaceRe.ReplaceAllLiteralString(s, " ")
+	if len(s) <= n {
+		return s
+	}
+
+	needCutWord := s[n] != ' '
+	s = s[:n]
+
+	lastSpaceIdx := strings.LastIndex(s, " ")
+	if needCutWord && n-lastSpaceIdx <= n/5 {
+		s = s[:lastSpaceIdx]
+	}
+
+	ellipsis := "…"
+	s = s + ellipsis
+	return s
+}
+
 func (eng *DocEngine) renderDocument(doc *docstore.MdDocument) error {
 	ropts := &md.Options{DisableShortcodes: !doc.EnableShortcodes}
-	renderHTMLBuf, err := eng.mdrender.Render(doc.Text, ropts)
+	renderHTMLBuf, ctx, err := eng.mdrender.Render(doc.Text, ropts)
 	if err != nil {
 		return errors.Wrap(err, "page render error")
 	}
-	if renderHTMLBuf.Len() == 0 {
-		return apperr.WrapfUserError(errors.New("empty page rendered"), "Empty content!")
-	}
 	doc.RenderedHTML = renderHTMLBuf.Bytes()
 
-	rawHTMLRender := []byte("<!-- raw HTML omitted -->")
-	isEmptyRawHTML := bytes.Compare(bytes.TrimSpace(doc.RenderedHTML), rawHTMLRender) == 0
-	if isEmptyRawHTML {
-		return apperr.WrapfUserError(errors.New("empty raw HTML page rendered"), "Empty content!")
+	if isEmptyHTMLRendered(doc.RenderedHTML) {
+		return apperr.WrapfUserError(errors.New("empty page rendered"), "Empty content!")
+	}
+
+	title, ok := ctx.Get(md.MdTitleKey).(*md.PagePreviewText)
+	if !ok {
+		return errors.New("Cannot get page title")
+	}
+	if title.Title != "" {
+		doc.Title = []byte(title.Title)
+	} else {
+		doc.Title = []byte(textToTitle(title.Body, maxTitleLen))
 	}
 
 	return nil

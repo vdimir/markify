@@ -137,14 +137,11 @@ func (t *tocTransformer) Transform(n *gast.Document, reader text.Reader, pc pars
 			headerID = id.([]byte)
 		}
 
-		var headingText bytes.Buffer
-		ast.Walk(n, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-			if entering && (n.Kind() == ast.KindString || n.Kind() == ast.KindText) {
-				headingText.Write(n.Text(reader.Source()))
-			}
-			return ast.WalkContinue, nil
-		})
-
+		headingText := &bytes.Buffer{}
+		err := extractTextFromNode(n, reader, headingText)
+		if err != nil {
+			return ast.WalkContinue, err
+		}
 		newNode := newTocTree(headingNode.Level).withTitleAndID(headingText.String(), headerID)
 
 		currentRoot = currentRoot.addChild(newNode)
