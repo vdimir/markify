@@ -111,9 +111,10 @@ func (app *App) concatTitle(docTitle string, customTitle string) string {
 
 func (app *App) viewDocument(
 	doc engine.DocumentRender,
-	title string,
+	customTitle string,
 	ogURL string,
 	w http.ResponseWriter) {
+	title := app.concatTitle(doc.Title(), customTitle)
 
 	var ogInfo *view.OpenGraphInfo
 	if ogURL != "" {
@@ -125,7 +126,6 @@ func (app *App) viewDocument(
 			// Description: "",
 		}
 	}
-	title = app.concatTitle(doc.Title(), title)
 	docView := &view.PageContext{
 		Title:  title,
 		Body:   doc.HTMLBody(),

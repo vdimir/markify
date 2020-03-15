@@ -104,6 +104,7 @@ func (app *App) handleCreateDocument(w http.ResponseWriter, r *http.Request) {
 func (app *App) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
 	allowedPaths := []string{
 		"/$", "/help$",
+		"/p/*",
 	}
 	buf := bytes.NewBufferString("User-agent: *\nDisallow: /\n")
 	for _, path := range allowedPaths {
