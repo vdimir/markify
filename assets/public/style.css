@@ -4,6 +4,12 @@ body {
     font-size: 14pt;
 }
 
+.text-logo {
+    height: 1.5em;
+    width: auto;
+    vertical-align: bottom;
+}
+
 .content {
     box-shadow: 0 1px 4px #ccc;
     padding: 10px 15px;
