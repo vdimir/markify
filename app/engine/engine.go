@@ -156,6 +156,8 @@ func (eng *DocEngine) renderDocument(doc *docstore.MdDocument) error {
 	if !ok {
 		return errors.New("Cannot get page title")
 	}
+
+	doc.Description = []byte(title.Body)
 	if title.Title != "" {
 		doc.Title = []byte(title.Title)
 	} else {

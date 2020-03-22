@@ -30,22 +30,24 @@ func TestDocTitle(t *testing.T) {
 	docEng, teardown := initDocEngine(t)
 	defer teardown()
 
-	testCases := []struct {
-		text     string
-		expected string
-	}{
+	type TestCase struct {
+		text          string
+		expectedTitle string
+		expectedDesc  string
+		n             int
+	}
+
+	testCases := []TestCase{
 		{
-			text:     "# Page title",
-			expected: "^Page title$",
+			text:          "# Page title",
+			expectedTitle: "^Page title$",
+			expectedDesc:  "^$",
 		},
 		{
-			text:     "Page title",
-			expected: "^Page title$",
+			text:          "Page title",
+			expectedTitle: "^Page title$",
+			expectedDesc:  "^Page title$",
 		},
-		// {
-		// 	text:     "\n\n",
-		// 	expected: "^$",
-		// },
 		{
 			text: "# Page title" + "\n" +
 				"## L2 Header" + "\n" +
@@ -54,47 +56,54 @@ func TestDocTitle(t *testing.T) {
 				"some other content" + "\n" +
 				"# H1 Header" + "\n" +
 				"xxx" + "\n",
-			expected: "^Page title$",
+			expectedTitle: "^Page title$",
+			expectedDesc:  "^some content$",
 		},
 		{
 			text: "## Page title" + "\n" +
 				"### L3 Header" + "\n",
-			expected: "^Page title$",
+			expectedTitle: "^Page title$",
+			expectedDesc:  "^$",
 		},
 		{
 			text: "Some content before header" + "\n" +
 				"## Page title" + "\n" +
 				"### L3 Header" + "\n" +
 				"Other content" + "\n",
-			expected: "^Page title$",
+			expectedTitle: "^Page title$",
+			expectedDesc:  "^Some content before header$",
 		},
 		{
 			text: "Some content before header" + "\n" +
 				"### Page title" + "\n" +
 				"### L3 Header" + "\n" +
 				"Other content" + "\n",
-			expected: "^Page title$",
+			expectedTitle: "^Page title$",
+			expectedDesc:  "^Some content before header$",
 		},
 		{
 			text: "Some content before header" + "\n" +
 				"#### Page title" + "\n" +
 				"# L1 Header" + "\n" +
 				"Other content" + "\n",
-			expected: "^Page title$",
+			expectedTitle: "^Page title$",
+			expectedDesc:  "^Some content before header$",
 		},
 		{
 			text: "\n\n" +
 				"Page title" + "\n\n" +
 				"No headers at all" + "\n\n" +
 				"Other content" + "\n",
-			expected: "^Page title$",
+			expectedTitle: "^Page title$",
+			expectedDesc:  "^Page title$",
 		},
 		{
 			text: "\n\n" +
 				"Page\ntitle" + "\n\n" +
 				"No headers at all" + "\n\n" +
 				"Other content" + "\n",
-			expected: "^Page title$",
+			expectedTitle: "^Page title$",
+			expectedDesc:  "^Page title$",
 		},
 		{
 			text: "\n\n" +
@@ -104,23 +113,29 @@ func TestDocTitle(t *testing.T) {
 				"laboris nisi ut aliquip ex ea commodo consequat." + "\n" +
 				"No headers at all" + "\n\n" +
 				"Other content" + "\n\n",
-			expected: "^Lorem ipsum dolor sit amet.{0,40}…$",
+			expectedTitle: "^Lorem ipsum dolor sit amet.{0,40}…$",
+			expectedDesc:  "^Lorem ipsum dolor sit amet[A-Za-z \\.,]{0,250}$",
 		},
 	}
 
-	for n, testCase := range testCases {
-		doc, err := docEng.CreateDocument(engine.NewUserDocumentData([]byte(testCase.text)))
-		testCaseN := n + 1
-		assert.NoErrorf(t, err, "Error in CreateDocument #%d", testCaseN)
-		expRe := regexp.MustCompile(testCase.expected)
-		assert.Regexpf(t, expRe, doc.Title(), "Error in CreateDocument #%d", testCaseN)
+	checkDoc := func(doc engine.Document, testCase TestCase) {
+		titleRe := regexp.MustCompile(testCase.expectedTitle)
+		assert.Regexpf(t, titleRe, doc.Title(), "Error in test case #%d", testCase.n)
+		descRe := regexp.MustCompile(testCase.expectedDesc)
+		assert.Regexpf(t, descRe, doc.Description(), "Error in test case #%d", testCase.n)
 	}
 
 	for n, testCase := range testCases {
+		testCase.n = n + 1
+		doc, err := docEng.CreateDocument(engine.NewUserDocumentData([]byte(testCase.text)))
+		assert.NoErrorf(t, err, "Error in test case #%d", testCase.n)
+		checkDoc(doc, testCase)
+	}
+
+	for n, testCase := range testCases {
+		testCase.n = n + 1
 		doc, err := docEng.SaveDocument(engine.NewUserDocumentData([]byte(testCase.text)))
-		testCaseN := n + 1
-		assert.NoErrorf(t, err, "Error in SaveDocument #%d", testCaseN)
-		expRe := regexp.MustCompile(testCase.expected)
-		assert.Regexpf(t, expRe, doc.Title(), "Error in SaveDocument #%d", testCaseN)
+		assert.NoErrorf(t, err, "Error in test case #%d", testCase.n)
+		checkDoc(doc, testCase)
 	}
 }

@@ -26,6 +26,7 @@ type MdDocumentParams struct {
 type MdMeta struct {
 	SrcURL           []byte `bson:",omitempty"`
 	Title            []byte `bson:",omitempty"`
+	Description      []byte `bson:",omitempty"`
 	OwnerID          []byte `bson:",omitempty"`
 	CreationTime     int64  `bson:",omitempty"`
 	UpdateTime       int64  `bson:",omitempty"`

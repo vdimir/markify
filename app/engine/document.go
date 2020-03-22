@@ -14,6 +14,7 @@ type documentWrapper struct {
 // Document base interface
 type Document interface {
 	Title() string
+	Description() string
 }
 
 // DocumentRender provides HTML formatted document
@@ -45,9 +46,14 @@ type DocumentFullSaved interface {
 	DocumentSaved
 }
 
-// Title of document (may be emtry)
+// Title of document (may be empty)
 func (doc *documentWrapper) Title() string {
 	return string(doc.dbDoc.Title)
+}
+
+// Description of document (may be empty)
+func (doc *documentWrapper) Description() string {
+	return string(doc.dbDoc.Description)
 }
 
 // HTMLBody rendered document

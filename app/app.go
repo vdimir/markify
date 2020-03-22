@@ -119,11 +119,11 @@ func (app *App) viewDocument(
 	var ogInfo *view.OpenGraphInfo
 	if ogURL != "" {
 		ogInfo = &view.OpenGraphInfo{
-			Title: title,
-			Type:  "article",
-			URL:   ogURL,
-			Image: "",
-			// Description: "",
+			Title:       title,
+			Type:        "article",
+			URL:         ogURL,
+			Image:       "/public/og-splash.png",
+			Description: doc.Description(),
 		}
 	}
 	docView := &view.PageContext{
