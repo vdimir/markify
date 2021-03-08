@@ -34,19 +34,6 @@ Will be displayed as:
 {{ tweet 1224047348109795330 }}
 
 
-### Instagram
-
-To embed Instagram post insert `{{ instagram <id> }}`
-
-Example:
-
-```
-{{ instagram B7PFiANKX5r }}
-```
-Will be displayed as:
-
-{{ instagram B7PFiANKX5r }}
-
 ### GitHub Gist
 To embed GitHub gist insert `{{ gist <userid> <gistid> [file] }}`
 

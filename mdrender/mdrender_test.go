@@ -107,6 +107,8 @@ func TestTweetShortcodeError(t *testing.T) {
 }
 
 func TestInstagramShortcode(t *testing.T) {
+	t.Skip()
+	
 	mdData := []byte("Foo\nInsagram {{ instagram B7gs_jFKWA0  }} ok?\n")
 
 	expNodes := map[string]*kvPair{
