@@ -40,6 +40,6 @@ jobs:
           SSH_HOST: markify.dev
         run: |
           scp docker-compose.yml vdimir@$SSH_HOST:/srv/markify
-          ssh vdimir@$SSH_HOST "docker tag vdimir/markify:latest vdimir/markify:previous"
+          ssh vdimir@$SSH_HOST "docker tag vdimir/markify:latest vdimir/markify:previous || echo 'No image markify'"
           ssh vdimir@$SSH_HOST "cd /srv/markify && docker-compose pull"
           ssh vdimir@$SSH_HOST "cd /srv/markify && docker-compose up -d"
