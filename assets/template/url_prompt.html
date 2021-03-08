@@ -4,12 +4,10 @@
     <title>
         {{- if .Title }}{{ .Title }}{{ else }}markify{{ end }}
     </title>
-    <meta name="title" content="{{- if .Title }}{{ .Title }}{{ else }}markify{{ end }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta name="description" content="Create pretty page from link to raw markdown">
-    {{- template "default_og" "/link" }}
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="/public/style.css">
     <script async defer src="https://buttons.github.io/buttons.js"></script>
