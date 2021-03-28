@@ -62,9 +62,7 @@ func (app *App) Shutdown() {
 func parseUserInput(r *http.Request) *engine.UserDocumentData {
 	return &engine.UserDocumentData{
 		Data:             []byte(r.FormValue("data")),
-		IsURL:            r.FormValue("type") == "url",
-		EnableShortcodes: r.FormValue("shortcode") == "on",
-		EnableRelImgLink: r.FormValue("rel-link") == "on",
+		Syntax:  r.FormValue("syntax"),
 	}
 }
 

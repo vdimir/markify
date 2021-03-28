@@ -2,26 +2,12 @@ package md
 
 import (
 	"bytes"
-	"net/url"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/util"
 )
-
-// Options config for markdown renderer
-type Options struct {
-	BaseURL           *url.URL
-	DisableShortcodes bool
-}
-
-func (opt *Options) fillParserCtx(ctx parser.Context) {
-	if opt.BaseURL != nil {
-		ctx.Set(LinkBaseURL, opt.BaseURL)
-	}
-	ctx.Set(EnableShortcodes, !opt.DisableShortcodes)
-}
 
 // Render renders markdown to html
 type Render struct {
@@ -35,10 +21,6 @@ func NewRender() (*Render, error) {
 			extension.GFM,
 			extension.Footnote,
 			extension.Typographer,
-			ImgReplaceRelativeLink{},
-			EmbedTweet,
-			EmbedInstagram,
-			EmbedGist,
 			TableOfContentsShortcode,
 		),
 		goldmark.WithParserOptions(
@@ -54,11 +36,8 @@ func NewRender() (*Render, error) {
 }
 
 // Render markdown to html
-func (r *Render) Render(data []byte, opt *Options) (*bytes.Buffer, parser.Context, error) {
+func (r *Render) Render(data []byte) (*bytes.Buffer, parser.Context, error) {
 	var ctx = parser.NewContext()
-	if opt != nil {
-		opt.fillParserCtx(ctx)
-	}
 
 	var htmlBuf bytes.Buffer
 	if err := r.md.Convert(data, &htmlBuf, parser.WithContext(ctx)); err != nil {

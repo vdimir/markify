@@ -2,7 +2,6 @@ package engine
 
 import (
 	"bytes"
-	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -52,7 +51,7 @@ func (eng *DocEngine) SaveDocument(preDoc *UserDocumentData) (DocumentFullSaved,
 // LoadDocumentRender return HTML for document with key
 func (eng *DocEngine) LoadDocumentRender(key []byte) (DocumentRender, error) {
 	var dbDoc = &docstore.MdDocument{}
-	err := eng.docStore.LoadDocument(key, docstore.ProjMeta|docstore.ProjRender, dbDoc)
+	err := eng.docStore.LoadDocument(key, dbDoc)
 	if err != nil {
 		return nil, err
 	}
@@ -71,36 +70,15 @@ func (eng *DocEngine) createDocument(preDoc *UserDocumentData) (*docstore.MdDocu
 		return nil, apperr.WrapfUserError(err, "Data in empty. Type something")
 	}
 
-	var textData []byte
-	var err error
-	var srcURL *url.URL
-	if preDoc.IsURL {
-		srcURL, err = parseURL(string(preDoc.Data))
-		if err != nil {
-			return nil, apperr.WrapfUserError(err, "Incorrect URL")
-		}
-		textData, err = downloadMd(srcURL, eng.fetcher)
-		if err != nil {
-			return nil, apperr.WrapfUserError(err, "Cannot retrieve data from URL")
-		}
-
-	} else {
-		textData = preDoc.Data
-	}
+	var err error = nil
 
 	curTime := time.Now()
 	doc := &docstore.MdDocument{
 		MdMeta: docstore.MdMeta{
 			CreationTime: curTime.Unix(),
 			UpdateTime:   curTime.Unix(),
-			MdDocumentParams: docstore.MdDocumentParams{
-				EnableShortcodes: preDoc.EnableShortcodes,
-			},
 		},
-		Text: textData,
-	}
-	if srcURL != nil {
-		doc.SrcURL = []byte(srcURL.String())
+		Text: preDoc.Data,
 	}
 
 	err = eng.renderDocument(doc)
@@ -141,8 +119,7 @@ func textToTitle(s string, n int) string {
 }
 
 func (eng *DocEngine) renderDocument(doc *docstore.MdDocument) error {
-	ropts := &md.Options{DisableShortcodes: !doc.EnableShortcodes}
-	renderHTMLBuf, ctx, err := eng.mdrender.Render(doc.Text, ropts)
+	renderHTMLBuf, ctx, err := eng.mdrender.Render(doc.Text)
 	if err != nil {
 		return errors.Wrap(err, "page render error")
 	}

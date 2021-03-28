@@ -74,7 +74,7 @@ func (c *StatusContext) Name() string {
 	return templateNames[StatusTpl]
 }
 
-// URLPromptContext context for utl_prompt.html
+// URLPromptContext context for url_prompt.html
 type URLPromptContext struct {
 	Title       string
 	Msg         string

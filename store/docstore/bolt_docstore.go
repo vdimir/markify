@@ -63,7 +63,7 @@ func (s *boltDocStore) SaveDocument(doc *MdDocument) (DBKey, error) {
 }
 
 // LoadDocument load specified document parts from database
-func (s *boltDocStore) LoadDocument(key DBKey, parts DocProjection, doc *MdDocument) error {
+func (s *boltDocStore) LoadDocument(key DBKey, doc *MdDocument) error {
 	err := s.docStorage.View(func(tx *bbolt.Tx) error {
 		blob := tx.Bucket(metaBucketName).Get(key)
 		if blob == nil {
@@ -79,7 +79,7 @@ func (s *boltDocStore) LoadDocument(key DBKey, parts DocProjection, doc *MdDocum
 }
 
 // UpdateDocument updates specified document parts in database
-func (s *boltDocStore) UpdateDocument(key DBKey, parts DocProjection, doc *MdDocument) error {
+func (s *boltDocStore) UpdateDocument(key DBKey, doc *MdDocument) error {
 	blob, err := bson.Marshal(doc)
 	if err != nil {
 		return err

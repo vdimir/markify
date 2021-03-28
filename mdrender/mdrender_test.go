@@ -2,7 +2,6 @@ package md
 
 import (
 	"bytes"
-	"net/url"
 	"path"
 	"strings"
 	"testing"
@@ -20,153 +19,6 @@ func TestRenderSimple(t *testing.T) {
 	mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
 	data := mustRenderMd(t, mdData)
 	assert.NotEmpty(t, data)
-}
-
-func TestRelativeImgLink(t *testing.T) {
-	rndr, err := NewRender()
-	require.NoError(t, err)
-
-	mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
-
-	pageURL, err := url.ParseRequestURI("http://aaa.com/foo/bar.md")
-	require.NoError(t, err)
-
-	buf, _, err := rndr.Render(mdData, &Options{BaseURL: pageURL})
-	assert.NoError(t, err)
-
-	htmlPrs, err := html.Parse(buf)
-	require.NoError(t, err)
-
-	imgExpectedTags := map[string]string{
-		"img":  "http://aaa.com/foo/static/foo.png",
-		"img2": "http://aaa.com/foo/bar.png",
-	}
-
-	traverseHTMLNodes(htmlPrs, func(n *html.Node) {
-		if n.Type != html.ElementNode || n.Data != "img" {
-			return
-		}
-		var src, alt string
-		for _, a := range n.Attr {
-			if a.Key == "src" {
-				src = a.Val
-			}
-			if a.Key == "alt" {
-				alt = a.Val
-			}
-		}
-		if expectedSrc, ok := imgExpectedTags[alt]; ok {
-			assert.Equal(t, expectedSrc, src)
-			delete(imgExpectedTags, alt)
-		}
-	})
-	assert.Empty(t, imgExpectedTags)
-}
-
-func TestTweetShortcode(t *testing.T) {
-	mdData := []byte("" +
-		"Foo\nTweet {{ tweet     1224047348109795330  }} ok?\n" +
-		"\n")
-
-	expNodes := map[string]*kvPair{
-		"blockquote": nil,
-		"a":          &kvPair{"href", "https://twitter.com/AlgebraFact/status/1224047348109795330"},
-	}
-	checkHTMLAttrs(t, mustRenderMd(t, mdData), expNodes)
-}
-
-func TestTweetShortcodeInCode(t *testing.T) {
-	mdData := []byte("" +
-		"Foo\nTweet `{{ tweet 1224047348109795330 }}`\n" +
-		"Tweet { tweet 1224047348109795311 }}\n" +
-		"")
-
-	expectedSubslices := map[string]bool{
-		"blockquote":                      false,
-		"{{ tweet 1224047348109795330 }}": true,
-		"{ tweet 1224047348109795311 }}":  true,
-	}
-
-	checkContaining(t, mustRenderMd(t, mdData), expectedSubslices)
-}
-
-func TestTweetShortcodeError(t *testing.T) {
-	mdData := []byte("" +
-		"Foo\nTweet {{ tweet 000 }}\n" +
-		"Tweet {{ tweet aaa }}\n" +
-		"")
-
-	expectedSubslices := map[string]bool{
-		"blockquote":               false,
-		"{{ tweet 000 }}":          false,
-		"{{ tweet aaa }}":          false,
-		"Unable to load tweet 000": true,
-		"Unable to load tweet aaa": true,
-	}
-	checkContaining(t, mustRenderMd(t, mdData), expectedSubslices)
-}
-
-func TestInstagramShortcode(t *testing.T) {
-	t.Skip()
-	
-	mdData := []byte("Foo\nInsagram {{ instagram B7gs_jFKWA0  }} ok?\n")
-
-	expNodes := map[string]*kvPair{
-		"blockquote": nil,
-		"a":          &kvPair{"href", "https://www.instagram.com/p/B7gs_jFKWA0"},
-	}
-	checkHTMLAttrs(t, mustRenderMd(t, mdData), expNodes)
-}
-
-func TestInstagramShortcodeError(t *testing.T) {
-	expectedSubslices := func(s string) map[string]bool {
-		return map[string]bool{s: true}
-	}
-	var data []byte
-
-	data = mustRenderMd(t, []byte("Foo\nInsagram {{ instagram x;//sdfs }} ok?\n"))
-	checkContaining(t, data, expectedSubslices("Wrong arguments for instagram"))
-
-	data = mustRenderMd(t, []byte("Foo\nInsagram {{ instagram }} ok?\n\n"))
-	checkContaining(t, data, expectedSubslices("Wrong arguments for instagram"))
-}
-
-func TestGistShortcode(t *testing.T) {
-	mdData := []byte("Foo\nGist {{ gist spf13 7896402 }} ok?\n\n")
-
-	expNodes := map[string]*kvPair{
-		"script": &kvPair{"src", "https://gist.github.com/spf13/7896402.js"},
-	}
-	checkHTMLAttrs(t, mustRenderMd(t, mdData), expNodes)
-}
-
-func TestGistShortcodeError(t *testing.T) {
-	mdData := []byte("Foo\nGist {{ gist spf13  }} ok?\n")
-
-	expectedSubslices := map[string]bool{
-		"Unable to display gist": true,
-	}
-	checkContaining(t, mustRenderMd(t, mdData), expectedSubslices)
-}
-
-func TestDisableShortcode(t *testing.T) {
-	mdData := []byte("" +
-		"Tweet {{ tweet 1224047348109795330 }}\n" +
-		"")
-
-	expectedSubslices := map[string]bool{
-		"blockquote":                      false,
-		"a":                               false,
-		"{{ tweet 1224047348109795330 }}": true,
-	}
-
-	rndr, err := NewRender()
-	require.NoError(t, err)
-
-	buf, _, err := rndr.Render(mdData, &Options{DisableShortcodes: true})
-	require.NoError(t, err)
-
-	checkContaining(t, buf.Bytes(), expectedSubslices)
 }
 
 func TestTOCShortcode(t *testing.T) {
@@ -202,7 +54,7 @@ func TestTitleExtractor(t *testing.T) {
 		rndr, err := NewRender()
 		require.NoError(t, err)
 
-		_, ctx, err := rndr.Render(mdData, nil)
+		_, ctx, err := rndr.Render(mdData)
 		require.NoError(t, err)
 		require.Equal(t, &PagePreviewText{"header 11", ""}, ctx.Get(MdTitleKey))
 	}
@@ -218,7 +70,7 @@ func TestTitleExtractor(t *testing.T) {
 		rndr, err := NewRender()
 		require.NoError(t, err)
 
-		_, ctx, err := rndr.Render(mdData, nil)
+		_, ctx, err := rndr.Render(mdData)
 		require.NoError(t, err)
 		require.Equal(t, &PagePreviewText{"header 11", "text 123 456"}, ctx.Get(MdTitleKey))
 	}
@@ -232,7 +84,7 @@ func TestTitleExtractor(t *testing.T) {
 		rndr, err := NewRender()
 		require.NoError(t, err)
 
-		_, ctx, err := rndr.Render(mdData, nil)
+		_, ctx, err := rndr.Render(mdData)
 		require.NoError(t, err)
 		require.Equal(t, &PagePreviewText{"", "text 11"}, ctx.Get(MdTitleKey))
 	}
@@ -246,7 +98,7 @@ func TestTitleExtractor(t *testing.T) {
 		rndr, err := NewRender()
 		require.NoError(t, err)
 
-		_, ctx, err := rndr.Render(mdData, nil)
+		_, ctx, err := rndr.Render(mdData)
 		require.NoError(t, err)
 		require.Equal(t, &PagePreviewText{"text 11", ""}, ctx.Get(MdTitleKey))
 	}
@@ -258,7 +110,7 @@ func mustRenderMd(t *testing.T, mdData []byte) []byte {
 	rndr, err := NewRender()
 	require.NoError(t, err)
 
-	buf, _, err := rndr.Render(mdData, nil)
+	buf, _, err := rndr.Render(mdData)
 	require.NoError(t, err)
 	return buf.Bytes()
 }

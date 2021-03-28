@@ -83,17 +83,13 @@ func (doc *documentWrapper) Key() []byte {
 // UserDocumentData contains untreated user input used to create new document
 type UserDocumentData struct {
 	Data             []byte
-	IsURL            bool
-	EnableShortcodes bool
-	EnableRelImgLink bool
+	Syntax            string
 }
 
 // NewUserDocumentData creates default UserDocumentData
 func NewUserDocumentData(data []byte) *UserDocumentData {
 	return &UserDocumentData{
 		Data:             data,
-		IsURL:            false,
-		EnableShortcodes: true,
-		EnableRelImgLink: false,
+		Syntax: "",
 	}
 }

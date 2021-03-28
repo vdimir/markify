@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vdimir/markify/app/apperr"
 	"github.com/vdimir/markify/app/engine"
 	"github.com/vdimir/markify/fetch"
 	"github.com/vdimir/markify/testutil"
@@ -34,56 +33,7 @@ func checkURLHash(t *testing.T, urlHash []byte) {
 	assert.Truef(t, m, "unexpected url path %q", string(urlHash))
 }
 
-func TestNewURLPage(t *testing.T) {
-	require := require.New(t)
-	assert := assert.New(t)
-	tc := &TestConfig{
-		fetcher: fetch.NewMock(),
-	}
-
-	tapp, teardown := createNewTestApp(t, tc)
-	defer teardown()
-	require.NotNil(tapp)
-
-	mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
-
-	tc.fetcher.(*fetch.Mock).SetData("http://foo.bar/page.md", mdData)
-	tc.fetcher.(*fetch.Mock).SetData("http://gist.github.com/abc/raw", mdData)
-	tc.fetcher.(*fetch.Mock).SetData("file:///home/page.md", mdData)
-
-	userURLInput := func(path string) *engine.UserDocumentData {
-		return &engine.UserDocumentData{
-			Data:  []byte(path),
-			IsURL: true,
-		}
-	}
-	urlHash, err := tapp.saveDocument(userURLInput("http://foo.bar/page.md"))
-	assert.NoError(err)
-	checkURLHash(t, urlHash)
-	doc, err := tapp.getDocument(urlHash)
-	assert.NoError(err)
-	assert.Regexp(regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), doc.HTMLBody())
-	assert.Regexp(regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), doc.HTMLBody())
-	assert.Regexp(regexp.MustCompile("Ok"), doc.HTMLBody())
-
-	_, err = tapp.saveDocument(userURLInput("http://goo.gl/page.md"))
-	assert.Error(err)
-	assert.IsType(apperr.UserError{}, err)
-
-	_, err = tapp.saveDocument(userURLInput("gist.github.com/abc/raw"))
-	assert.NoError(err)
-	checkURLHash(t, urlHash)
-
-	_, err = tapp.saveDocument(userURLInput("file:///home/page.md"))
-	assert.Error(err)
-	assert.IsType(apperr.UserError{}, err)
-
-	_, err = tapp.saveDocument(userURLInput("{}dsfsdfa}"))
-	assert.Error(err)
-	assert.IsType(apperr.UserError{}, err)
-}
-
-func TestNewTextPage(t *testing.T) {
+func TestNewMarkdownPage(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
 	tc := &TestConfig{

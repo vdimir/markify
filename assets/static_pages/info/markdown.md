@@ -92,7 +92,3 @@ Ellipsis...
 Double dash -- to insert en dash
 
 Triple dash --- to insert em dash
-
-### Extensions
-
-Additionally to basic markdown syntax markify supports some extensions like Table of Contents, social media embedding. [Read more](/info/extensions)

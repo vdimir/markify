@@ -4,7 +4,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"path"
 	"regexp"
@@ -85,7 +84,6 @@ func TestServerEndpointsExists(t *testing.T) {
 		"/info/markdown",
 		"/favicon.ico",
 		"/compose",
-		"/link",
 	}
 	for _, path := range paths {
 		_ = getResp(t, appPath(path), http.StatusOK)
@@ -143,11 +141,6 @@ func TestServerCreatePage(t *testing.T) {
 	tapp, teardown := createServer(t, nil)
 	defer teardown()
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
-		w.Write(mdData)
-	}))
-
 	appPath := createPathHelper(tapp.Addr)
 
 	composePage := func(data string) *http.Response {
@@ -155,18 +148,6 @@ func TestServerCreatePage(t *testing.T) {
 			"data": {data},
 		}
 		resp, err := http.PostForm(appPath("/compose"), formData)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-		return resp
-	}
-
-	linkPage := func(path string) *http.Response {
-		formData := url.Values{
-			"data": {path},
-			"type": {"url"},
-		}
-		resp, err := http.PostForm(appPath("/link"), formData)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -184,13 +165,6 @@ func TestServerCreatePage(t *testing.T) {
 		assert.Contains(t, mustReadAll(resp.Body), "<p>foo</p>")
 		assert.True(t, strings.HasPrefix(resp.Request.URL.Path, "/p/"))
 		savedPagesCases[resp.Request.URL.Path] = regexp.MustCompile("foo")
-	}
-	{
-		resp = linkPage(ts.URL)
-		respData := mustReadAll(resp.Body)
-		assert.Regexp(t, regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), respData)
-		assert.True(t, strings.HasPrefix(resp.Request.URL.Path, "/p/"))
-		savedPagesCases[resp.Request.URL.Path] = regexp.MustCompile("Ok")
 	}
 	{
 		mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))

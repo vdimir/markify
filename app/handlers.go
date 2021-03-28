@@ -39,9 +39,6 @@ func (app *App) Routes() *chi.Mux {
 
 	r.Get("/p/{pageID}", app.handleViewPageDoc)
 
-	r.Get("/link", app.handlePageInputURL)
-	r.Post("/link", app.handleCreateDocument)
-
 	r.Get("/compose", app.handlePageTextInput)
 	r.Post("/compose", app.handleCreateDocument)
 
@@ -79,18 +76,10 @@ func (app *App) handleCreateDocument(w http.ResponseWriter, r *http.Request) {
 	docID, err := app.saveDocument(createReq)
 	if err != nil {
 		if errUser, ok := err.(apperr.UserError); ok {
-			var returnToPageCtx view.TemplateContext
-			if createReq.IsURL {
-				returnToPageCtx = &view.URLPromptContext{
-					Title: fmt.Sprintf("%s :(", defaultTitle),
-					Msg:   errUser.String(),
-				}
-			} else {
-				returnToPageCtx = &view.EditorContext{
-					Title:       fmt.Sprintf("%s :(", defaultTitle),
-					Msg:         errUser.String(),
-					InitialText: string(createReq.Data),
-				}
+			returnToPageCtx := &view.EditorContext{
+				Title:       fmt.Sprintf("%s :(", defaultTitle),
+				Msg:         errUser.String(),
+				InitialText: string(createReq.Data),
 			}
 			app.viewTemplate(http.StatusBadRequest, returnToPageCtx, w)
 		} else {

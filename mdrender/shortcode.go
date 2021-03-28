@@ -19,9 +19,6 @@ var (
 
 // ShortCodeNodeKinds mapping `keyword -> NodeKind`
 var ShortCodeNodeKinds = map[string]gast.NodeKind{
-	"tweet":     gast.NewNodeKind("EmbedTweet"),
-	"gist":      gast.NewNodeKind("EmbedGist"),
-	"instagram": gast.NewNodeKind("EmbedInstagram"),
 	tocKeyword:  gast.NewNodeKind("TOCShortcode"),
 }
 

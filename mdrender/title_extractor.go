@@ -16,7 +16,7 @@ const maxTitleLen = 120
 
 type titleExtractorTransformer struct{}
 
-// PagePreviewText contains title of document and begining of content
+// PagePreviewText contains title of document and beginning of content
 type PagePreviewText struct {
 	Title string
 	Body  string
