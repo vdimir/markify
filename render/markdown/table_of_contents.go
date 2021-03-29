@@ -1,4 +1,4 @@
-package md
+package markdown
 
 import (
 	"bytes"

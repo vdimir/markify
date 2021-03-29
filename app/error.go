@@ -1,4 +1,4 @@
-package apperr
+package app
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ type UserError struct {
 	UserMsg string
 }
 
-// WrapfUserError return UserError with formatted userd message
+// WrapfUserError return UserError with formatted user message
 func WrapfUserError(err error, format string, a ...interface{}) UserError {
 	return UserError{
 		Inner:   err,
@@ -25,13 +25,4 @@ func (e UserError) String() string {
 
 func (e UserError) Error() string {
 	return fmt.Sprintf("UserError: %s, Msg: %s", e.Inner, e.UserMsg)
-}
-
-// DBError error occurred in database operation
-type DBError struct {
-	Inner error
-}
-
-func (e DBError) Error() string {
-	return fmt.Sprintf("DBError: %s", e.Inner)
 }

@@ -40,6 +40,6 @@ func NewRender(statikFS http.FileSystem) (HTMLPageRender, error) {
 
 // RenderPage render page and writes data to wr
 func (htmlRend *Render) RenderPage(wr io.Writer, tplContext TemplateContext) error {
-	err := htmlRend.tpl.ExecuteTemplate(wr, tplContext.Name(), tplContext)
+	err := htmlRend.tpl.ExecuteTemplate(wr, tplContext.FileName(), tplContext)
 	return err
 }

@@ -1,7 +1,11 @@
 package util
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
+	"hash"
+	"strings"
 
 	"github.com/rs/xid"
 )
@@ -25,7 +29,7 @@ func Base58UID(n int) []byte {
 
 	res := make([]byte, n)
 
-	for i, b := range hs.Sum(nil) {
+	for i, b := range hs.Sum(nil)[:n] {
 		c := hashAlphabet[b%alphabetSize]
 		if i >= n {
 			break
@@ -35,7 +39,39 @@ func Base58UID(n int) []byte {
 	return res
 }
 
-// GetUID retunst new unique id (xid)
+// GetUID returns new unique id (xid)
 func GetUID() []byte {
 	return xid.New().Bytes()
+}
+
+type SignedUIDGenerator struct {
+	hasher  hash.Hash
+	signLen int
+	sep     string
+}
+
+func NewSignedUIDGenerator(secret []byte) *SignedUIDGenerator {
+	return &SignedUIDGenerator{
+		hasher:  hmac.New(sha256.New224, secret),
+		signLen: 8,
+		sep:     "_",
+	}
+}
+
+func (s *SignedUIDGenerator) GetUID(n int) []byte {
+	uid := Base58UID(n)
+	sign := s.hasher.Sum(uid)
+	signStr := base64.StdEncoding.EncodeToString(sign)[:s.signLen]
+	return []byte(string(uid) + s.sep + signStr)
+
+}
+
+func (s *SignedUIDGenerator) Validate(data []byte) bool {
+	dataParts := strings.SplitN(string(data), s.sep, 2)
+	if len(dataParts) != 2 {
+		return false
+	}
+	sign := s.hasher.Sum([]byte(dataParts[0]))
+	signStr := base64.StdEncoding.EncodeToString(sign)[:s.signLen]
+	return signStr == dataParts[1]
 }

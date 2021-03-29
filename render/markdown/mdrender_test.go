@@ -1,4 +1,4 @@
-package md
+package markdown
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 	"github.com/vdimir/markify/testutil"
 )
 
-const testDataPath = "../testdata"
+const testDataPath = "../../testdata"
 
 func TestRenderSimple(t *testing.T) {
 	mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
@@ -51,12 +51,12 @@ func TestTitleExtractor(t *testing.T) {
 	{
 		mdData := []byte("# header 11")
 
-		rndr, err := NewRender()
-		require.NoError(t, err)
+		rndr := NewConverter()
 
-		_, ctx, err := rndr.Render(mdData)
+		doc, err := rndr.Convert(mdData)
 		require.NoError(t, err)
-		require.Equal(t, &PagePreviewText{"header 11", ""}, ctx.Get(MdTitleKey))
+		require.Equal(t, "header 11", doc.Title)
+		require.Equal(t, "", doc.Preview)
 	}
 	{
 		mdData := []byte("" +
@@ -66,13 +66,12 @@ func TestTitleExtractor(t *testing.T) {
 			"text 789" + "\n" +
 			"# header 22\n" +
 			"\n")
+		rndr := NewConverter()
 
-		rndr, err := NewRender()
+		doc, err := rndr.Convert(mdData)
 		require.NoError(t, err)
-
-		_, ctx, err := rndr.Render(mdData)
-		require.NoError(t, err)
-		require.Equal(t, &PagePreviewText{"header 11", "text 123 456"}, ctx.Get(MdTitleKey))
+		require.Equal(t, "header 11", doc.Title)
+		require.Equal(t, "text 123 456", doc.Preview)
 	}
 	{
 		mdData := []byte("" +
@@ -81,12 +80,12 @@ func TestTitleExtractor(t *testing.T) {
 			"text 33\n\n" +
 			"\n")
 
-		rndr, err := NewRender()
-		require.NoError(t, err)
+		rndr := NewConverter()
 
-		_, ctx, err := rndr.Render(mdData)
+		doc, err := rndr.Convert(mdData)
 		require.NoError(t, err)
-		require.Equal(t, &PagePreviewText{"", "text 11"}, ctx.Get(MdTitleKey))
+		require.Equal(t, "", doc.Title)
+		require.Equal(t, "text 11", doc.Preview)
 	}
 	{
 		mdData := []byte("" +
@@ -95,24 +94,22 @@ func TestTitleExtractor(t *testing.T) {
 			"# text 33\n\n" +
 			"\n")
 
-		rndr, err := NewRender()
-		require.NoError(t, err)
+		rndr := NewConverter()
 
-		_, ctx, err := rndr.Render(mdData)
+		doc, err := rndr.Convert(mdData)
 		require.NoError(t, err)
-		require.Equal(t, &PagePreviewText{"text 11", ""}, ctx.Get(MdTitleKey))
+		require.Equal(t, "text 11", doc.Title)
+		require.Equal(t, "", doc.Preview)
 	}
 }
 
 // --- helpers ---
 
-func mustRenderMd(t *testing.T, mdData []byte) []byte {
-	rndr, err := NewRender()
+func mustRenderMd(t *testing.T, mdData []byte) string {
+	rndr := NewConverter()
+	doc, err := rndr.Convert(mdData)
 	require.NoError(t, err)
-
-	buf, _, err := rndr.Render(mdData)
-	require.NoError(t, err)
-	return buf.Bytes()
+	return doc.Body
 }
 
 func traverseHTMLNodes(root *html.Node, process func(n *html.Node)) {
@@ -130,9 +127,9 @@ func traverseHTMLNodes(root *html.Node, process func(n *html.Node)) {
 // checkContaining checks that data contains (un)expected  substirings
 // expectedSubslices values should be true if string required
 // and false if string should be absent
-func checkContaining(t *testing.T, data []byte, expectedSubslices map[string]bool) {
+func checkContaining(t *testing.T, data string, expectedSubslices map[string]bool) {
 	for k, shouldContain := range expectedSubslices {
-		contains := bytes.Contains(data, []byte(k))
+		contains := strings.Contains(data, k)
 		msg := "does contains"
 		if shouldContain {
 			msg = "does not contains"

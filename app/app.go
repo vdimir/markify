@@ -2,23 +2,23 @@ package app
 
 import (
 	"fmt"
+	"github.com/vdimir/markify/render"
+	"github.com/vdimir/markify/store"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"path"
-
-	"github.com/vdimir/markify/store/kvstore"
-	"go.etcd.io/bbolt"
+	"regexp"
+	"strings"
+	"time"
+	"unicode/utf8"
 
 	"github.com/pkg/errors"
 	"github.com/rakyll/statik/fs"
-	"github.com/vdimir/markify/app/apperr"
-	"github.com/vdimir/markify/app/engine"
-	"github.com/vdimir/markify/app/view"
-	"github.com/vdimir/markify/fetch"
-	md "github.com/vdimir/markify/mdrender"
 	"github.com/vdimir/markify/util"
+	"github.com/vdimir/markify/view"
 )
 
 const defaultURLHashLen = 7
@@ -29,45 +29,33 @@ type Config struct {
 	AssetsPrefix string
 	DBPath       string
 	StatusText   string
+	UIDSecret    string // secret key to generate user ids
 }
 
-// TestConfig contains application configuration used for testing
-type TestConfig struct {
-	fetcher fetch.Fetcher
+type Store interface {
+	SetBlob(key string, reader io.Reader, meta map[string]string, ttl time.Duration) error
+	GetBlob(key string) (io.Reader, error)
+	GetMeta(key string) (map[string]string, error)
+	DeleteBlob(key string) error
 }
 
 // App provides high level interface to app functions for server
 type App struct {
-	cfg          *Config
-	engine       *engine.DocEngine
-	docIDMapping kvstore.Store
-	staticFs     http.FileSystem
-	htmlView     view.HTMLPageRender
-	httpServer   *http.Server
-	Addr         string
+	cfg        *Config
+	converter  *render.DocConverter
+	blobStore  Store
+	uidGen     *util.SignedUIDGenerator
+	staticFs   http.FileSystem
+	htmlView   view.HTMLPageRender
+	httpServer *http.Server
+	Addr       string
 }
 
 // NewApp create new App instance
-func NewApp(cfg *Config, tcgf *TestConfig) (*App, error) {
+func NewApp(cfg *Config) (*App, error) {
 	if err := os.MkdirAll(cfg.DBPath, os.ModePerm); err != nil && !os.IsExist(err) {
 		return nil, err
 	}
-	docIDMapping, err := kvstore.NewBoltStorage(path.Join(cfg.DBPath, "docid.db"), bbolt.Options{})
-	if err != nil {
-		return nil, err
-	}
-
-	mdRen, err := md.NewRender()
-	if err != nil {
-		return nil, err
-	}
-	var fetcher fetch.Fetcher
-	if tcgf != nil && tcgf.fetcher != nil {
-		fetcher = tcgf.fetcher
-	} else {
-		fetcher = fetch.NewFetcher()
-	}
-	docEngine := engine.NewDocEngine(cfg.DBPath, mdRen, fetcher)
 
 	var staticFs http.FileSystem
 	if cfg.Debug {
@@ -77,6 +65,7 @@ func NewApp(cfg *Config, tcgf *TestConfig) (*App, error) {
 	}
 
 	var htmlView view.HTMLPageRender
+	var err error = nil
 	if cfg.Debug {
 		htmlView, err = view.NewDebugRender(staticFs)
 	} else {
@@ -85,16 +74,45 @@ func NewApp(cfg *Config, tcgf *TestConfig) (*App, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error initializing html templates")
 	}
+	var uidGen *util.SignedUIDGenerator
+	if cfg.UIDSecret != "" {
+		uidGen = util.NewSignedUIDGenerator([]byte(cfg.UIDSecret))
+		cfg.UIDSecret = ""
+	}
 
+	blobStore, err := store.NewBoltStorage(path.Join(cfg.DBPath, "data.bdb"))
+	if err != nil {
+		return nil, errors.Wrap(err, "error initializing storage")
+	}
 	app := &App{
-		cfg:          cfg,
-		engine:       docEngine,
-		docIDMapping: docIDMapping,
-		staticFs:     staticFs,
-		htmlView:     htmlView,
+		cfg:       cfg,
+		uidGen:    uidGen,
+		converter: render.NewConverter(),
+		blobStore: blobStore,
+		staticFs:  staticFs,
+		htmlView:  htmlView,
 	}
 
 	return app, nil
+}
+
+var emptyTextRegex = regexp.MustCompile("^\\s*$")
+
+func (app *App) validatePasteRequest(req *CreatePasteRequest) error {
+	if !utf8.ValidString(req.Text) {
+		return errors.New("got broken input text")
+
+	}
+	if emptyTextRegex.MatchString(req.Text) {
+		return errors.New("got empty input")
+	}
+	if app.uidGen == nil || !app.uidGen.Validate([]byte(req.UserToken)) {
+		req.UserToken = ""
+	}
+	if err := app.converter.SupportSyntax(req.Syntax); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (app *App) concatTitle(docTitle string, customTitle string) string {
@@ -102,7 +120,7 @@ func (app *App) concatTitle(docTitle string, customTitle string) string {
 	case docTitle != "" && customTitle != "":
 		return fmt.Sprintf("%s - %s", customTitle, docTitle)
 	case docTitle != "":
-		return string(docTitle)
+		return docTitle
 	case customTitle != "":
 		return customTitle
 	}
@@ -110,11 +128,11 @@ func (app *App) concatTitle(docTitle string, customTitle string) string {
 }
 
 func (app *App) viewDocument(
-	doc engine.DocumentRender,
+	doc *render.Document,
 	customTitle string,
 	ogURL string,
 	w http.ResponseWriter) {
-	title := app.concatTitle(doc.Title(), customTitle)
+	title := app.concatTitle(doc.Title, customTitle)
 
 	var ogInfo *view.OpenGraphInfo
 	if ogURL != "" {
@@ -123,55 +141,42 @@ func (app *App) viewDocument(
 			Type:        "article",
 			URL:         ogURL,
 			Image:       "/public/og-splash.png",
-			Description: doc.Description(),
+			Description: doc.Preview,
 		}
 	}
+
 	docView := &view.PageContext{
 		Title:  title,
-		Body:   doc.HTMLBody(),
+		Body:   template.HTML(doc.Body),
 		OgInfo: ogInfo,
 	}
 	app.viewTemplate(http.StatusOK, docView, w)
 }
 
-func (app *App) viewRawDocument(doc engine.DocumentText, title string, w http.ResponseWriter) {
-	docView := &view.PageContext{
-		Title: app.concatTitle(doc.Title(), title),
-		Body:  template.HTML(fmt.Sprintf("<pre><code>%s</code></pre>", doc.MdText())),
-	}
-	app.viewTemplate(http.StatusOK, docView, w)
+// Validate request and save data. Returns id of created paste
+func (app *App) savePaste(req *CreatePasteRequest) (string, error) {
+	docID := util.Base58UID(defaultURLHashLen)
+
+	meta := map[string]string{}
+	meta["user"] = req.UserToken
+	meta["syntax"] = req.Syntax
+	// TODO: meta["create_time"] = ...
+	// TODO: meta["ttl"] = ...
+	err := app.blobStore.SetBlob(string(docID), strings.NewReader(req.Text), meta, req.Ttl)
+	return string(docID), err
 }
 
-func (app *App) createDocID(doc engine.DocumentSaved) ([]byte, error) {
-	newID := util.Base58UID(defaultURLHashLen)
-	err := app.docIDMapping.Save(newID, doc.Key())
-	if err != nil {
-		return nil, apperr.DBError{Inner: err}
-	}
-	return newID, nil
-}
-
-func (app *App) saveDocument(preDoc *engine.UserDocumentData) ([]byte, error) {
-	doc, err := app.engine.SaveDocument(preDoc)
+func (app *App) getDocument(docID string) (*render.Document, error) {
+	data, err := app.blobStore.GetBlob(docID)
 	if err != nil {
 		return nil, err
 	}
-	docID, err := app.createDocID(doc)
-	if err != nil {
-		return nil, apperr.DBError{Inner: err}
-	}
-	return docID, nil
-}
-
-func (app *App) getDocument(docID []byte) (engine.DocumentRender, error) {
-	key, err := app.docIDMapping.Load(docID)
+	meta, err := app.blobStore.GetMeta(docID)
 	if err != nil {
 		return nil, err
 	}
-	if key == nil {
-		return nil, nil
-	}
-	return app.engine.LoadDocumentRender(key)
+	doc, err := app.converter.Convert(data, meta["syntax"])
+	return doc, err
 }
 
 func newStatikFs() http.FileSystem {

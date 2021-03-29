@@ -35,7 +35,7 @@ func main() {
 		AssetsPrefix: "assets",
 		DBPath:       opts.DataDir,
 		StatusText:   fmt.Sprintf(`{"revision":"%s"}`, revision),
-	}, nil)
+	})
 
 	if err != nil {
 		panic(err)

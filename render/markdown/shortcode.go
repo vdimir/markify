@@ -1,4 +1,4 @@
-package md
+package markdown
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ var (
 
 // ShortCodeNodeKinds mapping `keyword -> NodeKind`
 var ShortCodeNodeKinds = map[string]gast.NodeKind{
-	tocKeyword:  gast.NewNodeKind("TOCShortcode"),
+	tocKeyword: gast.NewNodeKind("TOCShortcode"),
 }
 
 // A ShortCodeNode struct represents a tweet ast node

@@ -1,17 +1,14 @@
-package md
+package markdown
 
 import (
+	"github.com/pkg/errors"
 	"io"
 
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
 )
 
-type stopWalkError struct{}
-
-func (stopWalkError) Error() string {
-	return "StapWalk"
-}
+var stopWalkError = errors.New("StopWalk")
 
 func extractTextFromNode(n ast.Node, reader text.Reader, w io.Writer) error {
 	return ast.Walk(n, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -26,7 +23,7 @@ func extractTextFromNode(n ast.Node, reader text.Reader, w io.Writer) error {
 			}
 			if cnt == 0 || err != nil {
 				if err == nil {
-					err = stopWalkError{}
+					err = stopWalkError
 				}
 				return ast.WalkStop, err
 			}

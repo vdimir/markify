@@ -2,7 +2,7 @@ package view
 
 import (
 	"bytes"
-	"html/template"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"
 
@@ -21,18 +21,16 @@ func TestHTMLTemplateRender(t *testing.T) {
 	}
 
 	checkAllRender := func(r HTMLPageRender, pageCtxs []TemplateContext) {
-		assert.Equal(t, len(templateNames), len(pageCtxs))
 		checkRender(r, pageCtxs)
 	}
 
-	r, err := NewRender(http.Dir("../../assets"))
-	assert.NoError(t, err)
+	r, err := NewRender(http.Dir("../assets"))
+	require.NoError(t, err)
 
 	checkAllRender(r, []TemplateContext{
 		&EditorContext{},
 		&PageContext{},
 		&StatusContext{},
-		&URLPromptContext{},
 	})
 
 	checkAllRender(r, []TemplateContext{
@@ -43,7 +41,7 @@ func TestHTMLTemplateRender(t *testing.T) {
 		},
 		&PageContext{
 			Title: "Title",
-			Body:  template.HTML("<h1>Hello</h1>"),
+			Body:  "<h1>Hello</h1>",
 			OgInfo: &OpenGraphInfo{
 				Title:       "ogtitle",
 				URL:         "http://markify.dev/foobar",
@@ -57,17 +55,12 @@ func TestHTMLTemplateRender(t *testing.T) {
 			HeaderMsg: "HeaderMsg",
 			Msg:       "Msg",
 		},
-		&URLPromptContext{
-			Title:       "Title",
-			Msg:         "Msg",
-			InitialText: "InitialText",
-		},
 	})
 
 	checkRender(r, []TemplateContext{
 		&PageContext{
 			Title: "Title",
-			Body:  template.HTML("<h1>Hello</h1>"),
+			Body:  "<h1>Hello</h1>",
 			OgInfo: &OpenGraphInfo{
 				Title:       "ogtitle",
 				URL:         "http://markify.dev/foobar",

@@ -33,7 +33,7 @@ func createServer(t *testing.T, customCfg func(*app.Config)) (*app.App, func()) 
 	if customCfg != nil {
 		customCfg(cfg)
 	}
-	tapp, err := app.NewApp(cfg, nil)
+	tapp, err := app.NewApp(cfg)
 	require.NoError(t, err)
 
 	go tapp.StartServer("localhost", port)
@@ -83,7 +83,7 @@ func TestServerEndpointsExists(t *testing.T) {
 		"/about",
 		"/info/markdown",
 		"/favicon.ico",
-		"/compose",
+		"/create",
 	}
 	for _, path := range paths {
 		_ = getResp(t, appPath(path), http.StatusOK)
@@ -143,11 +143,12 @@ func TestServerCreatePage(t *testing.T) {
 
 	appPath := createPathHelper(tapp.Addr)
 
-	composePage := func(data string) *http.Response {
+	postMdPage := func(data string) *http.Response {
 		formData := url.Values{
 			"data": {data},
+			"syntax": {"markdown"},
 		}
-		resp, err := http.PostForm(appPath("/compose"), formData)
+		resp, err := http.PostForm(appPath("/create"), formData)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -156,19 +157,19 @@ func TestServerCreatePage(t *testing.T) {
 
 	var resp *http.Response
 	{
-		resp, _ = http.PostForm(appPath("/compose"), url.Values{"data": {""}})
+		resp, _ = http.PostForm(appPath("/create"), url.Values{"data": {""}})
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	}
 	savedPagesCases := map[string]*regexp.Regexp{}
 	{
-		resp = composePage("foo")
+		resp = postMdPage("foo")
 		assert.Contains(t, mustReadAll(resp.Body), "<p>foo</p>")
 		assert.True(t, strings.HasPrefix(resp.Request.URL.Path, "/p/"))
 		savedPagesCases[resp.Request.URL.Path] = regexp.MustCompile("foo")
 	}
 	{
 		mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
-		resp = composePage(string(mdData))
+		resp = postMdPage(string(mdData))
 		respData := mustReadAll(resp.Body)
 		assert.Regexp(t, regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), respData)
 		assert.Regexp(t, regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), respData)

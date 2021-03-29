@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    {{- template "default_og" "/compose"}}
+    {{- template "default_og" "/create"}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="/public/style.css">
     <script async defer src="https://buttons.github.io/buttons.js"></script>
@@ -16,7 +16,7 @@
     <header>{{ template "title_header" }}</header>
     <div class="form-block text-edit-block">
         {{- if .Msg }}<p>{{ .Msg }}</p>{{ end }}
-        <form class="text-edit-form" action="/compose" method="post" autocomplete="off" target="_blank">
+        <form class="text-edit-form" action="/create" method="post" autocomplete="off" target="_blank">
             <input type="hidden" name="type" value="text">
             <textarea name="data" maxlength="20000" placeholder="# paste text here…" required autofocus>{{ .InitialText }}</textarea>
             <div class="text-edit-form-controls">

@@ -59,11 +59,12 @@ h1 {
 }
 
 pre {
-    overflow-x: scroll;
     border: 1px solid #ccc;
     background-color: #fafafa;
     border-radius: 3px;
     padding: 10px 10px;
+    max-height: 80vh;
+    overflow: auto;
 }
 
 code::before {

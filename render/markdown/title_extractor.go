@@ -1,4 +1,4 @@
-package md
+package markdown
 
 import (
 	"bytes"
@@ -9,8 +9,8 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
-// MdTitleKey stores title extracted from first header
-var MdTitleKey = parser.NewContextKey()
+// titleParserCtxKey stores title extracted from first header
+var titleParserCtxKey = parser.NewContextKey()
 
 const maxTitleLen = 120
 
@@ -18,16 +18,16 @@ type titleExtractorTransformer struct{}
 
 // PagePreviewText contains title of document and beginning of content
 type PagePreviewText struct {
-	Title string
-	Body  string
+	Title   string
+	Preview string
 }
 
 func (t *titleExtractorTransformer) Transform(n *gast.Document, reader text.Reader, pc parser.Context) {
-	if _, ok := pc.Get(MdTitleKey).(*PagePreviewText); ok {
+	if _, ok := pc.Get(titleParserCtxKey).(*PagePreviewText); ok {
 		return
 	}
 
-	pc.Set(MdTitleKey, &PagePreviewText{})
+	pc.Set(titleParserCtxKey, &PagePreviewText{})
 
 	_ = ast.Walk(n, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
@@ -35,21 +35,20 @@ func (t *titleExtractorTransformer) Transform(n *gast.Document, reader text.Read
 		}
 
 		buf := &bytes.Buffer{}
-		dst := pc.Get(MdTitleKey).(*PagePreviewText)
+		dst := pc.Get(titleParserCtxKey).(*PagePreviewText)
 
 		if n.Kind() == ast.KindHeading && dst.Title == "" {
 			extractTextFromNode(n, reader, buf)
 			dst.Title = buf.String()
 		}
 
-		if n.Kind() == ast.KindParagraph && dst.Body == "" {
+		if n.Kind() == ast.KindParagraph && dst.Preview == "" {
 			extractTextFromNode(n, reader, buf)
-			dst.Body = buf.String()
+			dst.Preview = buf.String()
 		}
 
-		if dst.Title != "" && dst.Body != "" {
-			return ast.WalkStop, stopWalkError{}
-
+		if dst.Title != "" && dst.Preview != "" {
+			return ast.WalkStop, stopWalkError
 		}
 
 		return ast.WalkContinue, nil
