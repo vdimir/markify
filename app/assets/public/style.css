@@ -1,6 +1,6 @@
 body {
     margin: auto;
-    width: 65%;
+    width: 85%;
     font-size: 14pt;
 }
 
@@ -10,10 +10,25 @@ body {
     vertical-align: bottom;
 }
 
+.text-logo-small {
+    height: 35px;
+    width: auto;
+    vertical-align: bottom;
+    margin-right: 10px;
+    margin-bottom: -5px;
+}
+
+.small-header {
+    vertical-align: top;
+    padding-top: 10px;
+    font-size: 15px;
+}
+
 .content {
     box-shadow: 0 1px 4px #ccc;
     padding: 10px 15px;
     margin: 10px 0;
+    word-wrap: break-word;
 }
 
 @media (max-width: 1280px) {
@@ -224,7 +239,6 @@ header > h1 {
     color: #434343;
 }
 
-
 div.about-text {
     font-size: 20px;
     text-align: center;
@@ -355,7 +369,7 @@ form.text-edit-form details.settings {
 
 form summary {
     cursor: pointer;
-    text-decoration: underline;
+    /*text-decoration: underline;*/
     font-size: 18px;
 }
 
@@ -384,6 +398,20 @@ form summary::marker {
     content: "";
 }
 
+.top-send-text {
+    text-align: left;
+}
+
+.top-send-text > select {
+    margin-left: 2%;
+    margin-top: 10px;
+    width: 250px;
+}
+
+.top-send-text > hr {
+    border: 1px solid #f0f0f0;
+}
+
 textarea {
     -webkit-appearance: none;
     -webkit-focus-ring-color: none;
@@ -410,16 +438,6 @@ form.text-edit-form > textarea {
     outline: none;
     color: #434343;
 }
-
-/*
-form.text-edit-form button > i::before {
-    content: "\f1d8";
-}
-
-form.text-edit-form button:hover > i::before {
-    content: "\f1d9";
-}
-*/
 
 form.text-edit-form button {
     padding: 5px;

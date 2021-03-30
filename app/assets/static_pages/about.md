@@ -1,8 +1,8 @@
 # About
 
-[markify.dev](/) is a simple and minimalistic markdown sharing service.
+[markify.dev](/) is a simple and text sharing service.
 
-* [Markdown syntax](/info/markdown) for basic markdown syntax with Github Flavored Markdown
+* Support [markdown syntax](/info/markdown)
 
 ### Contact us:
 * Star on [GitHub](https://github.com/vdimir/markify)

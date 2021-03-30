@@ -20,6 +20,14 @@
     <link rel="stylesheet" href="/public/style.css">
 </head>
 <body>
-    <div class="content">{{ .Body }}</div>
+    <div class="content">
+        <div class="small-header">
+        <a href="/"><img src="/public/markify.svg" alt="markify" class="text-logo-small"></a>
+<!--        <span class="light-text">Created at: 30 Mar 2020 20:23 GMT</span>-->
+        <hr/>
+        </div>
+        {{ .Body }}
+    </div>
+
 </body>
 </html>
