@@ -1,32 +1,31 @@
 package view
 
 import (
+	"github.com/vdimir/markify/util"
 	"html/template"
 	"io"
-	"net/http"
-
-	"github.com/vdimir/markify/util"
+	"io/fs"
 )
 
-const templatePrefixDir = "/template"
+const templatePrefixDir = "template"
 
 // HTMLPageRender renders HTML pages from templates
 type HTMLPageRender interface {
 	RenderPage(wr io.Writer, tplContext TemplateContext) error
 }
 
-// Render contains set of templates and prerenred pages
+// Render contains set of templates and pre-rendered pages
 type Render struct {
 	tpl *template.Template
 }
 
 // NewRender creates new pages repository
-func NewRender(statikFS http.FileSystem) (HTMLPageRender, error) {
+func NewRender(fs fs.FS) (HTMLPageRender, error) {
 	htmlRend := &Render{
 		tpl: template.New("root"),
 	}
 
-	err := util.WalkFiles(statikFS, templatePrefixDir, func(data []byte, filePath string) error {
+	err := util.WalkFiles(fs, templatePrefixDir, func(data []byte, filePath string) error {
 		_, err := htmlRend.tpl.New(filePath).Parse(string(data))
 		return err
 	})

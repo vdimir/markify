@@ -1,11 +1,13 @@
 package app
 
 import (
+	"embed"
 	"fmt"
 	"github.com/vdimir/markify/render"
 	"github.com/vdimir/markify/store"
 	"html/template"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -16,7 +18,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/pkg/errors"
-	"github.com/rakyll/statik/fs"
 	"github.com/vdimir/markify/util"
 	"github.com/vdimir/markify/view"
 )
@@ -45,11 +46,12 @@ type App struct {
 	converter  *render.DocConverter
 	blobStore  Store
 	uidGen     *util.SignedUIDGenerator
-	staticFs   http.FileSystem
+	staticFs   fs.FS
 	htmlView   view.HTMLPageRender
 	httpServer *http.Server
 	Addr       string
 }
+
 
 // NewApp create new App instance
 func NewApp(cfg *Config) (*App, error) {
@@ -57,11 +59,11 @@ func NewApp(cfg *Config) (*App, error) {
 		return nil, err
 	}
 
-	var staticFs http.FileSystem
+	var staticFs fs.FS
 	if cfg.Debug {
 		staticFs = newLocalFs(cfg.AssetsPrefix)
 	} else {
-		staticFs = newStatikFs()
+		staticFs = newEmbeddedFs()
 	}
 
 	var htmlView view.HTMLPageRender
@@ -179,18 +181,21 @@ func (app *App) getDocument(docID string) (*render.Document, error) {
 	return doc, err
 }
 
-func newStatikFs() http.FileSystem {
+//go:embed assets/*
+var embeddedStaticFS embed.FS
+
+func newEmbeddedFs() fs.FS {
 	log.Printf("[INFO] use assets embedded to binary")
-	statikFS, err := fs.New()
+
+	embFs, err := fs.Sub(embeddedStaticFS, "assets")
 	if err != nil {
-		log.Fatalf("[ERROR] no embedded assets loaded, %s", err)
-		return nil
+		log.Fatal("[ERROR] can't load static files from assets")
 	}
-	return statikFS
+	return embFs
 }
 
-func newLocalFs(localPath string) http.FileSystem {
+func newLocalFs(localPath string) fs.FS {
 	log.Printf("[INFO] use assets from local directory %q", localPath)
-	statikFS := http.Dir(localPath)
-	return statikFS
+	localFS := os.DirFS(localPath)
+	return localFS
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/go-chi/chi"
 )
 
-const fixedPagesPrefixDir = "/static_pages"
+const fixedPagesPrefixDir = "static_pages"
 
 // StartServer listen incoming requests. Blocking function
 func (app *App) StartServer(host string, port uint16) {
@@ -153,7 +153,7 @@ func (app *App) addFileServer(r chi.Router, path string) {
 		panic("FileServer path not permit URL parameters slashes.")
 	}
 
-	webFs := http.FileServer(app.staticFs)
+	webFs := http.FileServer(http.FS(app.staticFs))
 	fileHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/") {
 			app.notFound(w, r)

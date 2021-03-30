@@ -8,8 +8,6 @@ import (
 	"github.com/vdimir/markify/app"
 )
 
-//go:generate $GOPATH/bin/statik --src=./assets --dest=./ -p app -f
-
 var revision = "local"
 
 // Opts contains command line options (see go-flags for details)
@@ -32,7 +30,7 @@ func main() {
 
 	appServer, err := app.NewApp(&app.Config{
 		Debug:        opts.Debug,
-		AssetsPrefix: "assets",
+		AssetsPrefix: "app/assets",
 		DBPath:       opts.DataDir,
 		StatusText:   fmt.Sprintf(`{"revision":"%s"}`, revision),
 	})

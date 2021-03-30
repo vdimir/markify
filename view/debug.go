@@ -2,26 +2,24 @@ package view
 
 import (
 	"io"
-	"net/http"
+	"io/fs"
 )
 
 // DebugRender like Render but reloads templates at every request
 // For testing purposes only
 type DebugRender struct {
-	statikFS http.FileSystem
+	fs.FS
 }
 
 // NewDebugRender creates debug HTMLPageRender
-func NewDebugRender(statikFS http.FileSystem) (HTMLPageRender, error) {
-	_, err := NewRender(statikFS)
-	return &DebugRender{
-		statikFS: statikFS,
-	}, err
+func NewDebugRender(fs fs.FS) (HTMLPageRender, error) {
+	_, err := NewRender(fs)
+	return &DebugRender{fs}, err
 }
 
 // RenderPage render page and writes data to wr. Realoads all templates every time
 func (htmlRend *DebugRender) RenderPage(wr io.Writer, tplContext TemplateContext) error {
-	inner, err := NewRender(htmlRend.statikFS)
+	inner, err := NewRender(htmlRend)
 	if err != nil {
 		return err
 	}

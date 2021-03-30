@@ -1,22 +1,19 @@
 EXE_NAME:=$(shell basename $(CURDIR))
 
-.PHONY: all generate test build run run-debug clean docker
+.PHONY: all test build run run-debug clean docker
 
 all: build
 
-generate:
-	go generate -x ./...
-
-test: generate
+test:
 	go test -timeout=60s ./...
 
-build: test generate
+build: test
 	go build -o ${EXE_NAME} ./
 
-run: generate
+run:
 	go run ./ --host=localhost --data ./var
 
-run-debug: generate
+run-debug:
 	go run ./ --debug --host=localhost --data ./var
 
 docker:

@@ -3,7 +3,7 @@ package view
 import (
 	"bytes"
 	"github.com/stretchr/testify/require"
-	"net/http"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +24,7 @@ func TestHTMLTemplateRender(t *testing.T) {
 		checkRender(r, pageCtxs)
 	}
 
-	r, err := NewRender(http.Dir("../assets"))
+	r, err := NewRender(os.DirFS("../app/assets"))
 	require.NoError(t, err)
 
 	checkAllRender(r, []TemplateContext{

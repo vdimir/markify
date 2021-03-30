@@ -17,7 +17,7 @@ func createNewTestApp(t *testing.T) (tapp *App, teardown func()) {
 
 	tapp, err := NewApp(&Config{
 		Debug:        false,
-		AssetsPrefix: "../assets",
+		AssetsPrefix: "assets",
 		DBPath:       tmpPath,
 	})
 	assert.NoError(t, err)

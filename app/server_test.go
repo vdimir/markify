@@ -26,7 +26,7 @@ func createServer(t *testing.T, customCfg func(*app.Config)) (*app.App, func()) 
 
 	cfg := &app.Config{
 		Debug:        false,
-		AssetsPrefix: "../assets",
+		AssetsPrefix: "assets",
 		DBPath:       tmpPath,
 		StatusText:   `{"status": "ok"}`,
 	}

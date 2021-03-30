@@ -1,28 +1,26 @@
 package util
 
 import (
-	"encoding/json"
+	"io/fs"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/rakyll/statik/fs"
 )
 
 // FileWalkerFunc walker function for WalkFiles
 type FileWalkerFunc func(data []byte, filePath string) error
 
-// WalkFiles is wrapper around fs.Walk that walks only files excluding direcorines
+// WalkFiles is wrapper around fs.Walk that walks only files excluding directories
 // and handles file one errors
-func WalkFiles(hfs http.FileSystem, prefixPath string, walker FileWalkerFunc) error {
-	walkErr := fs.Walk(hfs, prefixPath, func(filePath string, info os.FileInfo, err error) error {
+func WalkFiles(hfs fs.FS, prefixPath string, walker FileWalkerFunc) error {
+	walkErr := fs.WalkDir(hfs, prefixPath, func(filePath string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "fs walk error")
 		}
-		if info.IsDir() || !info.Mode().IsRegular() {
+		if d.IsDir() {
 			return nil
 		}
 
@@ -45,24 +43,6 @@ func WalkFiles(hfs http.FileSystem, prefixPath string, walker FileWalkerFunc) er
 	})
 
 	return walkErr
-}
-
-// GetJSON perform GET request and decode data
-func GetJSON(path string, v interface{}) error {
-	resp, err := http.Get(path)
-	if err != nil {
-		return errors.Wrapf(err, "cannot GET %q", path)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.Errorf("get from %q respond error: %d - %q", path, resp.StatusCode, body)
-	}
-	err = json.NewDecoder(resp.Body).Decode(v)
-	if err != nil {
-		return errors.Wrapf(err, "cannot decode data from %q", path)
-	}
-	return nil
 }
 
 // AddRoutePrefix adds prefix to request and handle with h handler

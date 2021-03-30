@@ -9,7 +9,6 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/pkg/errors v0.9.1
-	github.com/rakyll/statik v0.1.6
 	github.com/rs/xid v1.2.1
 	github.com/stretchr/testify v1.4.0
 	github.com/yuin/goldmark v1.1.22
