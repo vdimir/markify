@@ -2,6 +2,7 @@ package app
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"github.com/vdimir/markify/render"
 	"github.com/vdimir/markify/store"
@@ -28,15 +29,14 @@ const defaultURLHashLen = 7
 type Config struct {
 	Debug        bool
 	AssetsPrefix string
-	DBPath       string
+	StorageSpec       string
 	StatusText   string
 	UIDSecret    string // secret key to generate user ids
 }
 
 type Store interface {
 	SetBlob(key string, reader io.Reader, meta map[string]string, ttl time.Duration) error
-	GetBlob(key string) (io.Reader, error)
-	GetMeta(key string) (map[string]string, error)
+	GetBlob(key string) (io.Reader, map[string]string, error)
 	DeleteBlob(key string) error
 }
 
@@ -52,13 +52,13 @@ type App struct {
 	Addr       string
 }
 
+type Document struct {
+	render.Document
+	CreateTime time.Time
+}
 
 // NewApp create new App instance
 func NewApp(cfg *Config) (*App, error) {
-	if err := os.MkdirAll(cfg.DBPath, os.ModePerm); err != nil && !os.IsExist(err) {
-		return nil, err
-	}
-
 	var staticFs fs.FS
 	if cfg.Debug {
 		staticFs = newLocalFs(cfg.AssetsPrefix)
@@ -82,7 +82,7 @@ func NewApp(cfg *Config) (*App, error) {
 		cfg.UIDSecret = ""
 	}
 
-	blobStore, err := store.NewBoltStorage(path.Join(cfg.DBPath, "data.bdb"))
+	blobStore, err := createStorage(cfg.StorageSpec)
 	if err != nil {
 		return nil, errors.Wrap(err, "error initializing storage")
 	}
@@ -130,7 +130,7 @@ func (app *App) concatTitle(docTitle string, customTitle string) string {
 }
 
 func (app *App) viewDocument(
-	doc *render.Document,
+	doc *Document,
 	customTitle string,
 	ogURL string,
 	w http.ResponseWriter) {
@@ -152,6 +152,9 @@ func (app *App) viewDocument(
 		Body:   template.HTML(doc.Body),
 		OgInfo: ogInfo,
 	}
+	if !doc.CreateTime.IsZero() {
+		docView.CreateTime = doc.CreateTime.Format("Jan 2 15:04:05 2006 MST")
+	}
 	app.viewTemplate(http.StatusOK, docView, w)
 }
 
@@ -162,23 +165,55 @@ func (app *App) savePaste(req *CreatePasteRequest) (string, error) {
 	meta := map[string]string{}
 	meta["user"] = req.UserToken
 	meta["syntax"] = req.Syntax
-	// TODO: meta["create_time"] = ...
-	// TODO: meta["ttl"] = ...
-	err := app.blobStore.SetBlob(string(docID), strings.NewReader(req.Text), meta, req.Ttl)
+	timeStr, err := time.Now().UTC().MarshalText()
+	if err != nil {
+		return "", err
+	}
+	meta["create_time"] = string(timeStr)
+	meta["ttl"] = req.Ttl.String()
+	err = app.blobStore.SetBlob(string(docID), strings.NewReader(req.Text), meta, req.Ttl)
 	return string(docID), err
 }
 
-func (app *App) getDocument(docID string) (*render.Document, error) {
-	data, err := app.blobStore.GetBlob(docID)
+func (app *App) getDocument(docID string) (*Document, error) {
+	data, meta, err := app.blobStore.GetBlob(docID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't get data")
+	}
+
+	rdoc, err := app.converter.Convert(data, meta["syntax"])
 	if err != nil {
 		return nil, err
 	}
-	meta, err := app.blobStore.GetMeta(docID)
+	createTime := time.Time{}
+	err = createTime.UnmarshalText([]byte(meta["create_time"]))
 	if err != nil {
-		return nil, err
+		log.Printf("[ERROR] can't parse time from metadata: %q: %s", meta["create_time"], err.Error())
 	}
-	doc, err := app.converter.Convert(data, meta["syntax"])
-	return doc, err
+	doc := &Document{Document: *rdoc, CreateTime: createTime}
+	return doc, nil
+}
+
+func createStorage(storageSpec string) (Store, error){
+	typeAndOptions := strings.SplitN(storageSpec, ":", 2)
+	if len(typeAndOptions) != 2 {
+		return nil, errors.Errorf("error parse storage specification %q", storageSpec)
+	}
+	if typeAndOptions[0] == "local" {
+		dbFile := path.Join(typeAndOptions[1], "data.bdb")
+		log.Printf("[INFO] creating local storage, data file %q", dbFile)
+		return store.NewBoltStorage(dbFile)
+	}
+	if typeAndOptions[0] == "s3" {
+		s3conf := store.S3Config{}
+		err := json.Unmarshal([]byte(typeAndOptions[1]), &s3conf)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error parse s3 config")
+		}
+		log.Printf("[INFO] using s3 storage, endpoint %q, bucket %q", s3conf.Endpoint, s3conf.Bucket)
+		return store.NewS3Storage(s3conf)
+	}
+	return nil, errors.Errorf("unknown storage type %q", typeAndOptions[0])
 }
 
 //go:embed assets/*

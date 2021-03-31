@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -23,6 +25,10 @@ type Bolt struct {
 
 // NewBoltStorage create Bolt Store.
 func NewBoltStorage(fileName string) (*Bolt, error) {
+	if err := os.MkdirAll(filepath.Dir(fileName), os.ModePerm); err != nil && !os.IsExist(err) {
+		return nil, err
+	}
+
 	bkts := [][]byte{[]byte(dataBktName), []byte(metaBktName)}
 	db, err := newBoltWithBuckets(fileName, bkts, bbolt.Options{})
 	return &Bolt{
@@ -49,16 +55,23 @@ func (b *Bolt) SetBlob(key string, reader io.Reader, meta map[string]string, _ t
 	})
 }
 
-func (b *Bolt) GetBlob(key string) (io.Reader, error) {
+func (b *Bolt) GetBlob(key string) (io.Reader, map[string]string, error) {
 	var data []byte
 	err := b.db.View(func(tx *bolt.Tx) error {
 		data = tx.Bucket([]byte(dataBktName)).Get([]byte(key))
 		return nil
 	})
-	return bytes.NewReader(data), err
+	if err != nil {
+		return nil, nil, err
+	}
+	meta, err := b.getMeta(key)
+	if err != nil {
+		return nil, nil, err
+	}
+	return bytes.NewReader(data), meta, err
 }
 
-func (b *Bolt) GetMeta(key string) (map[string]string, error) {
+func (b *Bolt) getMeta(key string) (map[string]string, error) {
 	var data []byte
 	err := b.db.View(func(tx *bolt.Tx) error {
 		data = tx.Bucket([]byte(metaBktName)).Get([]byte(key))
@@ -96,7 +109,7 @@ func newBoltWithBuckets(fileName string, bkts [][]byte, options bbolt.Options) (
 	err = db.Update(func(tx *bbolt.Tx) error {
 		for _, bkt := range bkts {
 			if _, e := tx.CreateBucketIfNotExists(bkt); e != nil {
-				return errors.Wrapf(e, "failed to create top level bucket %s", bkt)
+				return errors.Wrapf(e, "failed to create top level Bucket %s", bkt)
 			}
 		}
 		return nil

@@ -11,10 +11,10 @@ build: test
 	go build -o ${EXE_NAME} ./
 
 run:
-	go run ./ --host=localhost --data ./var
+	go run ./ --host=localhost
 
 run-debug:
-	go run ./ --debug --host=localhost --data ./var
+	go run ./ --debug --host=localhost
 
 docker:
 	export REVISION_INFO="$(shell git diff HEAD --exit-code --quiet || echo '*')$(shell git rev-parse --short HEAD)-$(shell date +%Y%m%d_%H%M%S)-dev"; \

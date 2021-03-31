@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -27,7 +28,7 @@ func createServer(t *testing.T, customCfg func(*app.Config)) (*app.App, func()) 
 	cfg := &app.Config{
 		Debug:        false,
 		AssetsPrefix: "assets",
-		DBPath:       tmpPath,
+		StorageSpec:  fmt.Sprintf("local:%s", tmpPath),
 		StatusText:   `{"status": "ok"}`,
 	}
 	if customCfg != nil {

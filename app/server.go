@@ -119,7 +119,7 @@ func (app *App) addFixedPages(r chi.Router) {
 			if err != nil {
 				panic(err)
 			}
-			app.viewDocument(doc, "", r.URL.Path, w)
+			app.viewDocument(&Document{*doc, time.Time{}}, "", r.URL.Path, w)
 		}
 		return handler
 	}
@@ -131,7 +131,7 @@ func (app *App) addFixedPages(r chi.Router) {
 			return err
 		}
 		handler := func(w http.ResponseWriter, r *http.Request) {
-			app.viewDocument(doc, "", r.URL.Path, w)
+			app.viewDocument(&Document{*doc, time.Time{}}, "", r.URL.Path, w)
 		}
 
 		if app.cfg.Debug {

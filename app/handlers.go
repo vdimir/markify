@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -111,7 +112,7 @@ func (app *App) handlePagePreview(w http.ResponseWriter, r *http.Request) {
 		app.serverError(err, w)
 		return
 	}
-	app.viewDocument(doc, "Preview", "", w)
+	app.viewDocument(&Document{*doc, time.Time{}}, "Preview", "", w)
 }
 
 func (app *App) handleViewPageDoc(w http.ResponseWriter, r *http.Request) {

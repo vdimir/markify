@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/chroma v0.8.2
 	github.com/go-chi/chi v4.0.3+incompatible
 	github.com/go-chi/render v1.0.1
-	github.com/jessevdk/go-flags v1.4.0
+	github.com/jessevdk/go-flags v1.5.0
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/pkg/errors v0.9.1
 	github.com/rs/xid v1.2.1
