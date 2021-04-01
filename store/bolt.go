@@ -61,6 +61,9 @@ func (b *Bolt) GetBlob(key string) (io.Reader, map[string]string, error) {
 		data = tx.Bucket([]byte(dataBktName)).Get([]byte(key))
 		return nil
 	})
+	if data == nil {
+		return nil, nil, nil
+	}
 	if err != nil {
 		return nil, nil, err
 	}

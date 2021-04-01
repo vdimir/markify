@@ -54,6 +54,7 @@ type App struct {
 
 type Document struct {
 	render.Document
+	DocId string
 	CreateTime time.Time
 }
 
@@ -149,6 +150,7 @@ func (app *App) viewDocument(
 		Title:  title,
 		Body:   template.HTML(doc.Body),
 		OgInfo: ogInfo,
+		DocId: doc.DocId,
 	}
 	if !doc.CreateTime.IsZero() {
 		docView.CreateTime = doc.CreateTime.Format("Jan 2 15:04:05 2006 MST")
@@ -178,6 +180,9 @@ func (app *App) getDocument(docID string) (*Document, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't get data")
 	}
+	if data == nil {
+		return nil, nil
+	}
 
 	rdoc, err := app.converter.Convert(data, meta["syntax"])
 	if err != nil {
@@ -188,7 +193,7 @@ func (app *App) getDocument(docID string) (*Document, error) {
 	if err != nil {
 		log.Printf("[ERROR] can't parse time from metadata: %q: %s", meta["create_time"], err.Error())
 	}
-	doc := &Document{Document: *rdoc, CreateTime: createTime}
+	doc := &Document{Document: *rdoc, DocId: docID, CreateTime: createTime}
 	return doc, nil
 }
 

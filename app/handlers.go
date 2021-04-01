@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -39,6 +40,7 @@ func (app *App) Routes() *chi.Mux {
 	r.Get("/", app.handlePageIndex)
 
 	r.Get("/p/{pageID}", app.handleViewPageDoc)
+	r.Get("/p/{pageID}/text", app.handleViewPlainText)
 
 	r.Get("/create", app.handlePageTextInput)
 	r.Post("/create", app.handleCreateDocument)
@@ -81,10 +83,7 @@ func (app *App) handleCreateDocument(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
-	allowedPaths := []string{
-		"/$", "/help$",
-		"/p/*",
-	}
+	allowedPaths := []string{"/$", "/about$", "/info/*"}
 	buf := bytes.NewBufferString("User-agent: *\nDisallow: /\n")
 	for _, path := range allowedPaths {
 		buf.WriteString(fmt.Sprintf("Allow: %s\n", path))
@@ -112,7 +111,7 @@ func (app *App) handlePagePreview(w http.ResponseWriter, r *http.Request) {
 		app.serverError(err, w)
 		return
 	}
-	app.viewDocument(&Document{*doc, time.Time{}}, "Preview", "", w)
+	app.viewDocument(&Document{*doc, "",time.Time{}}, "Preview", "", w)
 }
 
 func (app *App) handleViewPageDoc(w http.ResponseWriter, r *http.Request) {
@@ -127,6 +126,25 @@ func (app *App) handleViewPageDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	app.viewDocument(doc, "", r.URL.Path, w)
+}
+
+func (app *App) handleViewPlainText(w http.ResponseWriter, r *http.Request) {
+	pageID := chi.URLParam(r, "pageID")
+	data, _, err := app.blobStore.GetBlob(pageID)
+	if err != nil {
+		app.serverError(err, w)
+		return
+	}
+	if data == nil {
+		app.notFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, err = io.Copy(w, data)
+	if err != nil {
+		log.Printf("[ERROR] can't write response: %s", err.Error())
+		return
+	}
 }
 
 func (app *App) notFound(w http.ResponseWriter, r *http.Request) {

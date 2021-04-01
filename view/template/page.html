@@ -23,10 +23,10 @@
     <div class="content">
         <div class="small-header">
         <a href="/"><img src="/public/markify.svg" alt="markify" class="text-logo-small"></a>
-            {{- if .CreateTime }}
-            <span class="light-text">Created at: {{ .CreateTime }}</span>
-            {{- end }}
-            <hr/>
+        {{- if .DocId }}<span class="light-text"><a href="{{ .DocId }}/text">PlainText</a></span>{{- end }}
+        <span style="margin-left: 20px"></span>
+        {{- if .CreateTime }}<span class="light-text">Created at: {{ .CreateTime }}</span>{{- end }}
+        <hr/>
         </div>
         {{ .Body }}
     </div>

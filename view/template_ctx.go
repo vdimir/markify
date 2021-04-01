@@ -35,6 +35,7 @@ type PageContext struct {
 	Body   template.HTML
 	OgInfo *OpenGraphInfo
 	CreateTime string
+	DocId string
 }
 
 // Name of the page

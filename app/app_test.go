@@ -43,21 +43,18 @@ func TestNewMarkdownPage(t *testing.T) {
 	mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
 	key, err := tapp.savePaste(&CreatePasteRequest{Text: string(mdData), Syntax: "markdown"})
 	assert.NoError(err)
-
-	doc, err := tapp.getDocument(key)
-	assert.NoError(err)
-	assert.Regexp(regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), doc.Body)
-	assert.Regexp(regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), doc.Body)
-	assert.Regexp(regexp.MustCompile("Ok"), doc.Body)
-
-	//{
-	//	key, err := tapp.saveDocument(engine.NewUserDocumentData([]byte("   ")))
-	//	assert.Error(err)
-	//	assert.Nil(key)
-	//}
-	//{
-	//	key, err := tapp.saveDocument(engine.NewUserDocumentData([]byte("<p>abc</p>\n<div>def</div>")))
-	//	assert.Error(err)
-	//	assert.Nil(key)
-	//}
+	{
+		doc, err := tapp.getDocument(key)
+		require.NoError(err)
+		require.NotNil(doc)
+		assert.Regexp(regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), doc.Body)
+		assert.Regexp(regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), doc.Body)
+		assert.Regexp(regexp.MustCompile("Ok"), doc.Body)
+	}
+	{
+		unexistingKey := "__deadbeef__"
+		doc, err := tapp.getDocument(unexistingKey)
+		require.NoError(err)
+		require.Nil(doc)
+	}
 }
