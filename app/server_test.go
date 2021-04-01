@@ -104,6 +104,7 @@ func TestServerEndpointsExists(t *testing.T) {
 func TestServerDebugMode(t *testing.T) {
 	tappDebug, teardown := createServer(t, func(c *app.Config) {
 		c.Debug = true
+		c.TemplatePath = "../view/template"
 	})
 	defer teardown()
 

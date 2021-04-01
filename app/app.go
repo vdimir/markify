@@ -28,8 +28,9 @@ const defaultURLHashLen = 7
 // Config contains application configuration
 type Config struct {
 	Debug        bool
+	TemplatePath string
 	AssetsPrefix string
-	StorageSpec       string
+	StorageSpec  string
 	StatusText   string
 	UIDSecret    string // secret key to generate user ids
 }
@@ -69,7 +70,11 @@ func NewApp(cfg *Config) (*App, error) {
 
 	templatePath := ""
 	if cfg.Debug {
-		templatePath = "view/template"
+		if cfg.TemplatePath != "" {
+			templatePath = cfg.TemplatePath
+		} else {
+			templatePath = "view/template"
+		}
 	}
 	htmlView, err := view.NewView(templatePath)
 	if err != nil {
