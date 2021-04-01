@@ -61,6 +61,9 @@ func (s3 *S3Storage) GetBlob(key string) (io.Reader, map[string]string, error) {
 	}
 	stat, err := obj.Stat()
 	if err != nil {
+		if errResp, ok := err.(minio.ErrorResponse); ok && errResp.Code == "NoSuchKey" {
+			return nil, nil, nil
+		}
 		return nil, nil, errors.Wrap(err, "s3 get object meta error")
 	}
 	mapKeysToLower(stat.UserMetadata)
