@@ -3,7 +3,6 @@ package view
 import (
 	"bytes"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,7 +10,7 @@ import (
 
 func TestHTMLTemplateRender(t *testing.T) {
 
-	checkRender := func(r HTMLPageRender, pageCtxs []TemplateContext) {
+	checkRender := func(r HTMLPageView, pageCtxs []TemplateContext) {
 		for _, ctx := range pageCtxs {
 			wr := &bytes.Buffer{}
 			err := r.RenderPage(wr, ctx)
@@ -20,11 +19,11 @@ func TestHTMLTemplateRender(t *testing.T) {
 		}
 	}
 
-	checkAllRender := func(r HTMLPageRender, pageCtxs []TemplateContext) {
+	checkAllRender := func(r HTMLPageView, pageCtxs []TemplateContext) {
 		checkRender(r, pageCtxs)
 	}
 
-	r, err := NewRender(os.DirFS("../app/assets"))
+	r, err := NewView("template")
 	require.NoError(t, err)
 
 	checkAllRender(r, []TemplateContext{

@@ -47,7 +47,7 @@ type App struct {
 	blobStore  Store
 	uidGen     *util.SignedUIDGenerator
 	staticFs   fs.FS
-	htmlView   view.HTMLPageRender
+	htmlView   view.HTMLPageView
 	httpServer *http.Server
 	Addr       string
 }
@@ -66,13 +66,11 @@ func NewApp(cfg *Config) (*App, error) {
 		staticFs = newEmbeddedFs()
 	}
 
-	var htmlView view.HTMLPageRender
-	var err error = nil
+	templatePath := ""
 	if cfg.Debug {
-		htmlView, err = view.NewDebugRender(staticFs)
-	} else {
-		htmlView, err = view.NewRender(staticFs)
+		templatePath = "view/template"
 	}
+	htmlView, err := view.NewView(templatePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error initializing html templates")
 	}

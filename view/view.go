@@ -1,16 +1,19 @@
 package view
 
 import (
+	"embed"
 	"github.com/vdimir/markify/util"
 	"html/template"
 	"io"
 	"io/fs"
+	"os"
 )
 
-const templatePrefixDir = "template"
+//go:embed template/*
+var embeddedTemplateFS embed.FS
 
-// HTMLPageRender renders HTML pages from templates
-type HTMLPageRender interface {
+// HTMLPageView renders HTML pages from templates
+type HTMLPageView interface {
 	RenderPage(wr io.Writer, tplContext TemplateContext) error
 }
 
@@ -19,13 +22,29 @@ type Render struct {
 	tpl *template.Template
 }
 
-// NewRender creates new pages repository
-func NewRender(fs fs.FS) (HTMLPageRender, error) {
+func NewView(filePath string) (HTMLPageView, error) {
+	if filePath != "" {
+		return &DebugRender{os.DirFS(filePath)}, nil
+	}
+	subFs, err := fs.Sub(embeddedTemplateFS, "template")
+	if err != nil {
+		return nil, err
+	}
+	return newView(subFs)
+}
+
+// RenderPage render page and writes data to wr
+func (htmlRend *Render) RenderPage(wr io.Writer, tplContext TemplateContext) error {
+	err := htmlRend.tpl.ExecuteTemplate(wr, tplContext.FileName(), tplContext)
+	return err
+}
+
+func newView(fs fs.FS) (HTMLPageView, error) {
 	htmlRend := &Render{
 		tpl: template.New("root"),
 	}
 
-	err := util.WalkFiles(fs, templatePrefixDir, func(data []byte, filePath string) error {
+	err := util.WalkFiles(fs, ".", func(data []byte, filePath string) error {
 		_, err := htmlRend.tpl.New(filePath).Parse(string(data))
 		return err
 	})
@@ -37,8 +56,3 @@ func NewRender(fs fs.FS) (HTMLPageRender, error) {
 	return htmlRend, nil
 }
 
-// RenderPage render page and writes data to wr
-func (htmlRend *Render) RenderPage(wr io.Writer, tplContext TemplateContext) error {
-	err := htmlRend.tpl.ExecuteTemplate(wr, tplContext.FileName(), tplContext)
-	return err
-}

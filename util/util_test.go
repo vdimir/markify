@@ -11,7 +11,7 @@ import (
 )
 
 func TestWalkFilesHttpDir(t *testing.T) {
-	fs := os.DirFS("../app/assets")
+	fs := os.DirFS("../view")
 	filesNames := map[string]bool{}
 	err := WalkFiles(fs, "template", func(data []byte, filePath string) error {
 		filesNames[filePath] = true
