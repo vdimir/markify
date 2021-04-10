@@ -27,16 +27,18 @@ jobs:
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
           SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ubuntu
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
           ssh-add - <<< "${{ secrets.SSH_DEPLOY_PRIVATE_KEY }}"
-          ssh -q vdimir@$SSH_HOST "echo ok"
+          ssh -q $SSH_USER@$SSH_HOST "echo ok"
 
       - name: Deploy
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
           SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ubuntu
         run: |
-          ssh vdimir@$SSH_HOST "ansible-playbook --vault-password-file=.vault_pass -i inventory ansible/deploy.yml"
+          ssh $SSH_USER@$SSH_HOST "ansible-playbook --vault-password-file=.vault_pass -i inventory ansible/deploy.yml"
