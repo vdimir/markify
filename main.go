@@ -8,15 +8,13 @@ import (
 	"github.com/vdimir/markify/app"
 )
 
-//go:generate $GOPATH/bin/statik --src=./assets --dest=./ -p app -f
-
 var revision = "local"
 
 // Opts contains command line options (see go-flags for details)
 type Opts struct {
-	Hostname string `short:"h" long:"host" required:"false" description:"server host name" env:"SERVER_HOSTNAME"`
-	Port     uint16 `short:"p" long:"port" required:"false" description:"server port" env:"SERVER_PORT" default:"8080"`
-	DataDir  string `short:"d" long:"data" required:"false" description:"path to directory with data" env:"DB_DATA_PATH" default:"./"`
+	Hostname string `short:"h" long:"host" required:"false" description:"server host name" env:"MARKIFY_SERVER_HOSTNAME"`
+	Port     uint16 `short:"p" long:"port" required:"false" description:"server port" env:"MARKIFY_SERVER_PORT" default:"8080"`
+	Storage  string `short:"s" long:"storage" required:"false" description:"storage specification '<type_of_storage>:<config>', see storage code for details" env:"MARKIFY_STORAGE" default:"local:./"`
 	Debug    bool   `long:"debug" description:"debug mode"`
 }
 
@@ -32,10 +30,10 @@ func main() {
 
 	appServer, err := app.NewApp(&app.Config{
 		Debug:        opts.Debug,
-		AssetsPrefix: "assets",
-		DBPath:       opts.DataDir,
+		AssetsPrefix: "app/assets",
+		StorageSpec:  opts.Storage,
 		StatusText:   fmt.Sprintf(`{"revision":"%s"}`, revision),
-	}, nil)
+	})
 
 	if err != nil {
 		panic(err)

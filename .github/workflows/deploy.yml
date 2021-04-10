@@ -15,17 +15,6 @@ jobs:
       - name: Login to Package Registry
         run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-      - name: Setup SSH Keys and known_hosts
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-          SSH_HOST: markify.dev
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
-          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-          ssh-add - <<< "${{ secrets.SSH_DEPLOY_PRIVATE_KEY }}"
-          ssh -q vdimir@$SSH_HOST "echo ok"
-
       - name: Build docker image
         run: docker build --build-arg REVISION_INFO="${GITHUB_SHA:0:7}-$(date +%Y%m%d_%H%M%S)" . -t markify
 
@@ -34,12 +23,20 @@ jobs:
           docker tag markify vdimir/markify:latest
           docker push vdimir/markify:latest
 
+      - name: Setup SSH Keys and known_hosts
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.SSH_DEPLOY_PRIVATE_KEY }}"
+          ssh -q vdimir@$SSH_HOST "echo ok"
+
       - name: Deploy
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-          SSH_HOST: markify.dev
+          SSH_HOST: ${{ secrets.SSH_HOST }}
         run: |
-          scp docker-compose.yml vdimir@$SSH_HOST:/srv/markify
-          ssh vdimir@$SSH_HOST "docker tag vdimir/markify:latest vdimir/markify:previous"
-          ssh vdimir@$SSH_HOST "cd /srv/markify && docker-compose pull"
-          ssh vdimir@$SSH_HOST "cd /srv/markify && docker-compose up -d"
+          ssh vdimir@$SSH_HOST "ansible-playbook --vault-password-file=.vault_pass -i inventory ansible/deploy.yml"

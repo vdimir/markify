@@ -1,27 +1,25 @@
 EXE_NAME:=$(shell basename $(CURDIR))
 
-.PHONY: all generate test build run run-debug clean docker
-
+.PHONY: all
 all: build
 
-generate:
-	go generate -x ./...
-
-test: generate
+.PHONY: test
+test:
 	go test -timeout=60s ./...
 
-build: test generate
+.PHONY: build
+build: test
 	go build -o ${EXE_NAME} ./
 
-run: generate
-	go run ./ --host=localhost --data ./var
+.PHONY: run
+run:
+	go run ./ --debug --host=localhost
 
-run-debug: generate
-	go run ./ --debug --host=localhost --data ./var
-
+.PHONY: docker
 docker:
 	export REVISION_INFO="$(shell git diff HEAD --exit-code --quiet || echo '*')$(shell git rev-parse --short HEAD)-$(shell date +%Y%m%d_%H%M%S)-dev"; \
 	docker build --build-arg REVISION_INFO=${REVISION_INFO}  . -t markify
 
+.PHONY: clean
 clean:
 	rm -f ${EXE_NAME}

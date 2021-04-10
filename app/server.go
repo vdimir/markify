@@ -4,26 +4,23 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"path"
 	"strings"
 	"time"
 
-	"github.com/vdimir/markify/app/engine"
-
-	"github.com/vdimir/markify/app/view"
 	"github.com/vdimir/markify/util"
+	"github.com/vdimir/markify/view"
 
 	"github.com/pkg/errors"
 
 	"github.com/go-chi/chi"
 )
 
-const fixedPagesPrefixDir = "/static_pages"
+const fixedPagesPrefixDir = "static_pages"
 
-// StartServer listen incoming requsets. Blocking function
+// StartServer listen incoming requests. Blocking function
 func (app *App) StartServer(host string, port uint16) {
 
 	serverURL := host
@@ -58,13 +55,18 @@ func (app *App) Shutdown() {
 		log.Print("[DEBUG] shutdown http server completed")
 	}
 }
-
-func parseUserInput(r *http.Request) *engine.UserDocumentData {
-	return &engine.UserDocumentData{
-		Data:             []byte(r.FormValue("data")),
-		IsURL:            r.FormValue("type") == "url",
-		EnableShortcodes: r.FormValue("shortcode") == "on",
-		EnableRelImgLink: r.FormValue("rel-link") == "on",
+func (app *App) respondError(err error, req *CreatePasteRequest, w http.ResponseWriter) {
+	if errUser, ok := err.(UserError); ok {
+		returnToPageCtx := &view.EditorContext{
+			Title:       fmt.Sprintf("%s :(", defaultTitle),
+			Msg:         errUser.String(),
+		}
+		if req != nil {
+			returnToPageCtx.InitialText = req.Text
+		}
+		app.viewTemplate(http.StatusBadRequest, returnToPageCtx, w)
+	} else {
+		app.serverError(err, w)
 	}
 }
 
@@ -83,7 +85,7 @@ func (app *App) viewTemplate(code int, ctx view.TemplateContext, w http.Response
 	err := app.htmlView.RenderPage(htmlBuf, ctx)
 
 	if err != nil {
-		log.Printf("[ERROR] %v", errors.Wrapf(err, "cannot render template %s", ctx.Name()))
+		log.Printf("[ERROR] %v", errors.Wrapf(err, "cannot render template %s", ctx.FileName()))
 		app.serverErrorFallback(w)
 		return
 	}
@@ -109,39 +111,34 @@ func (app *App) serverErrorFallback(w http.ResponseWriter) {
 func (app *App) addFixedPages(r chi.Router) {
 	createDebugHanlder := func(filePath string, raw bool) func(w http.ResponseWriter, r *http.Request) {
 		handler := func(w http.ResponseWriter, r *http.Request) {
-			f, _ := app.staticFs.Open(filePath)
-			data, _ := ioutil.ReadAll(f)
-
-			doc, err := app.engine.CreateDocument(engine.NewUserDocumentData(data))
+			f, err := app.staticFs.Open(filePath)
 			if err != nil {
 				panic(err)
 			}
-			app.viewDocument(doc, "", r.URL.Path, w)
+			doc, err := app.converter.Convert(f, "markdown")
+			if err != nil {
+				panic(err)
+			}
+			app.viewDocument(&Document{*doc, "",time.Time{}}, "", r.URL.Path, w)
 		}
 		return handler
 	}
 
 	err := util.WalkFiles(app.staticFs, fixedPagesPrefixDir, func(data []byte, filePath string) error {
 		name := strings.TrimSuffix(filePath, ".md")
-		doc, err := app.engine.CreateDocument(engine.NewUserDocumentData(data))
+		doc, err := app.converter.Convert(bytes.NewReader(data), "markdown")
 		if err != nil {
 			return err
 		}
 		handler := func(w http.ResponseWriter, r *http.Request) {
-			app.viewDocument(doc, "", r.URL.Path, w)
-		}
-
-		rawHandler := func(w http.ResponseWriter, r *http.Request) {
-			app.viewRawDocument(doc, "Raw", w)
+			app.viewDocument(&Document{*doc, "",time.Time{}}, "", r.URL.Path, w)
 		}
 
 		if app.cfg.Debug {
 			handler = createDebugHanlder(path.Join(fixedPagesPrefixDir, filePath), false)
-			rawHandler = createDebugHanlder(path.Join(fixedPagesPrefixDir, filePath), true)
 		}
 
 		r.Get("/"+name, handler)
-		r.Get("/"+name+"/raw", rawHandler)
 		return nil
 	})
 
@@ -156,7 +153,7 @@ func (app *App) addFileServer(r chi.Router, path string) {
 		panic("FileServer path not permit URL parameters slashes.")
 	}
 
-	webFs := http.FileServer(app.staticFs)
+	webFs := http.FileServer(http.FS(app.staticFs))
 	fileHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/") {
 			app.notFound(w, r)

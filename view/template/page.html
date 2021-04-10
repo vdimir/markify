@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ .Title }}</title>
+    <meta name="title" content="{{ .Title }}">
+    {{- if .OgInfo }}
+    <meta name="description" content="{{ .OgInfo.Description }}">
+
+    <meta property="og:title" content="{{ .OgInfo.Title }}" />
+    <meta property="og:type" content="{{ .OgInfo.Type }}" />
+    <meta property="og:url" content="{{ .OgInfo.URL }}" />
+    <meta property="og:image" content="{{ .OgInfo.Image }}" />
+    <meta property="og:description" content="{{ .OgInfo.Description }}" />
+    {{- else }}
+    {{- template "default_og" "/" }}
+    {{- end }}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+    <div class="content">
+        <div class="small-header">
+        <a href="/"><img src="/public/markify.svg" alt="markify" class="text-logo-small"></a>
+        {{- if .DocId }}<span class="light-text"><a href="{{ .DocId }}/text">PlainText</a></span>{{- end }}
+        <span style="margin-left: 20px"></span>
+        {{- if .CreateTime }}<span class="light-text">Created at: {{ .CreateTime }}</span>{{- end }}
+        <hr/>
+        </div>
+        {{ .Body }}
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ .Title }}</title>
+    <meta name="title" content="{{ .Title }}">
+    <meta name="description" content="{{ .Msg }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    {{- template "default_og"}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+    <header>
+        {{- if .HeaderMsg }}<h1>{{ .HeaderMsg }}</h1>{{ else }}{{ template  "title_header" }}{{ end }}
+    </header>
+    <div class="form-block">
+        <h1>{{ .Msg }}</h1>
+        <a style="color:#a0a0a0" href="/">Go home</a>
+    </div>
+    {{ template "footer" }}
+</body>
+</html>

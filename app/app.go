@@ -1,24 +1,26 @@
 package app
 
 import (
+	"embed"
+	"encoding/json"
 	"fmt"
+	"github.com/vdimir/markify/render"
+	"github.com/vdimir/markify/store"
 	"html/template"
+	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"path"
-
-	"github.com/vdimir/markify/store/kvstore"
-	"go.etcd.io/bbolt"
+	"regexp"
+	"strings"
+	"time"
+	"unicode/utf8"
 
 	"github.com/pkg/errors"
-	"github.com/rakyll/statik/fs"
-	"github.com/vdimir/markify/app/apperr"
-	"github.com/vdimir/markify/app/engine"
-	"github.com/vdimir/markify/app/view"
-	"github.com/vdimir/markify/fetch"
-	md "github.com/vdimir/markify/mdrender"
 	"github.com/vdimir/markify/util"
+	"github.com/vdimir/markify/view"
 )
 
 const defaultURLHashLen = 7
@@ -26,75 +28,97 @@ const defaultURLHashLen = 7
 // Config contains application configuration
 type Config struct {
 	Debug        bool
+	TemplatePath string
 	AssetsPrefix string
-	DBPath       string
+	StorageSpec  string
 	StatusText   string
+	UIDSecret    string // secret key to generate user ids
 }
 
-// TestConfig contains application configuration used for testing
-type TestConfig struct {
-	fetcher fetch.Fetcher
+type Store interface {
+	SetBlob(key string, reader io.Reader, meta map[string]string, ttl time.Duration) error
+	GetBlob(key string) (io.Reader, map[string]string, error)
+	DeleteBlob(key string) error
 }
 
 // App provides high level interface to app functions for server
 type App struct {
-	cfg          *Config
-	engine       *engine.DocEngine
-	docIDMapping kvstore.Store
-	staticFs     http.FileSystem
-	htmlView     view.HTMLPageRender
-	httpServer   *http.Server
-	Addr         string
+	cfg        *Config
+	converter  *render.DocConverter
+	blobStore  Store
+	uidGen     *util.SignedUIDGenerator
+	staticFs   fs.FS
+	htmlView   view.HTMLPageView
+	httpServer *http.Server
+	Addr       string
+}
+
+type Document struct {
+	render.Document
+	DocId string
+	CreateTime time.Time
 }
 
 // NewApp create new App instance
-func NewApp(cfg *Config, tcgf *TestConfig) (*App, error) {
-	if err := os.MkdirAll(cfg.DBPath, os.ModePerm); err != nil && !os.IsExist(err) {
-		return nil, err
-	}
-	docIDMapping, err := kvstore.NewBoltStorage(path.Join(cfg.DBPath, "docid.db"), bbolt.Options{})
-	if err != nil {
-		return nil, err
-	}
-
-	mdRen, err := md.NewRender()
-	if err != nil {
-		return nil, err
-	}
-	var fetcher fetch.Fetcher
-	if tcgf != nil && tcgf.fetcher != nil {
-		fetcher = tcgf.fetcher
-	} else {
-		fetcher = fetch.NewFetcher()
-	}
-	docEngine := engine.NewDocEngine(cfg.DBPath, mdRen, fetcher)
-
-	var staticFs http.FileSystem
+func NewApp(cfg *Config) (*App, error) {
+	var staticFs fs.FS
 	if cfg.Debug {
 		staticFs = newLocalFs(cfg.AssetsPrefix)
 	} else {
-		staticFs = newStatikFs()
+		staticFs = newEmbeddedFs()
 	}
 
-	var htmlView view.HTMLPageRender
+	templatePath := ""
 	if cfg.Debug {
-		htmlView, err = view.NewDebugRender(staticFs)
-	} else {
-		htmlView, err = view.NewRender(staticFs)
+		if cfg.TemplatePath != "" {
+			templatePath = cfg.TemplatePath
+		} else {
+			templatePath = "view/template"
+		}
 	}
+	htmlView, err := view.NewView(templatePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error initializing html templates")
 	}
+	var uidGen *util.SignedUIDGenerator
+	if cfg.UIDSecret != "" {
+		uidGen = util.NewSignedUIDGenerator([]byte(cfg.UIDSecret))
+		cfg.UIDSecret = ""
+	}
 
+	blobStore, err := createStorage(cfg.StorageSpec)
+	if err != nil {
+		return nil, errors.Wrap(err, "error initializing storage")
+	}
 	app := &App{
-		cfg:          cfg,
-		engine:       docEngine,
-		docIDMapping: docIDMapping,
-		staticFs:     staticFs,
-		htmlView:     htmlView,
+		cfg:       cfg,
+		uidGen:    uidGen,
+		converter: render.NewConverter(),
+		blobStore: blobStore,
+		staticFs:  staticFs,
+		htmlView:  htmlView,
 	}
 
 	return app, nil
+}
+
+var emptyTextRegex = regexp.MustCompile("^\\s*$")
+
+func (app *App) validatePasteRequest(req *CreatePasteRequest) error {
+	if !utf8.ValidString(req.Text) {
+		return errors.New("got broken input text")
+
+	}
+	if emptyTextRegex.MatchString(req.Text) {
+		return errors.New("got empty input")
+	}
+	if app.uidGen == nil || !app.uidGen.Validate([]byte(req.UserToken)) {
+		req.UserToken = ""
+	}
+	if err := app.converter.SupportSyntax(req.Syntax); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (app *App) concatTitle(docTitle string, customTitle string) string {
@@ -102,7 +126,7 @@ func (app *App) concatTitle(docTitle string, customTitle string) string {
 	case docTitle != "" && customTitle != "":
 		return fmt.Sprintf("%s - %s", customTitle, docTitle)
 	case docTitle != "":
-		return string(docTitle)
+		return docTitle
 	case customTitle != "":
 		return customTitle
 	}
@@ -110,11 +134,11 @@ func (app *App) concatTitle(docTitle string, customTitle string) string {
 }
 
 func (app *App) viewDocument(
-	doc engine.DocumentRender,
+	doc *Document,
 	customTitle string,
 	ogURL string,
 	w http.ResponseWriter) {
-	title := app.concatTitle(doc.Title(), customTitle)
+	title := app.concatTitle(doc.Title, customTitle)
 
 	var ogInfo *view.OpenGraphInfo
 	if ogURL != "" {
@@ -123,69 +147,98 @@ func (app *App) viewDocument(
 			Type:        "article",
 			URL:         ogURL,
 			Image:       "/public/og-splash.png",
-			Description: doc.Description(),
+			Description: doc.Preview,
 		}
 	}
+
 	docView := &view.PageContext{
 		Title:  title,
-		Body:   doc.HTMLBody(),
+		Body:   template.HTML(doc.Body),
 		OgInfo: ogInfo,
+		DocId: doc.DocId,
+	}
+	if !doc.CreateTime.IsZero() {
+		docView.CreateTime = doc.CreateTime.Format("Jan 2 15:04:05 2006 MST")
 	}
 	app.viewTemplate(http.StatusOK, docView, w)
 }
 
-func (app *App) viewRawDocument(doc engine.DocumentText, title string, w http.ResponseWriter) {
-	docView := &view.PageContext{
-		Title: app.concatTitle(doc.Title(), title),
-		Body:  template.HTML(fmt.Sprintf("<pre><code>%s</code></pre>", doc.MdText())),
+// Validate request and save data. Returns id of created paste
+func (app *App) savePaste(req *CreatePasteRequest) (string, error) {
+	docID := util.Base58UID(defaultURLHashLen)
+
+	meta := map[string]string{}
+	meta["user"] = req.UserToken
+	meta["syntax"] = req.Syntax
+	timeStr, err := time.Now().UTC().MarshalText()
+	if err != nil {
+		return "", err
 	}
-	app.viewTemplate(http.StatusOK, docView, w)
+	meta["create_time"] = string(timeStr)
+	meta["ttl"] = req.Ttl.String()
+	err = app.blobStore.SetBlob(string(docID), strings.NewReader(req.Text), meta, req.Ttl)
+	return string(docID), err
 }
 
-func (app *App) createDocID(doc engine.DocumentSaved) ([]byte, error) {
-	newID := util.Base58UID(defaultURLHashLen)
-	err := app.docIDMapping.Save(newID, doc.Key())
+func (app *App) getDocument(docID string) (*Document, error) {
+	data, meta, err := app.blobStore.GetBlob(docID)
 	if err != nil {
-		return nil, apperr.DBError{Inner: err}
+		return nil, errors.Wrapf(err, "can't get data")
 	}
-	return newID, nil
-}
-
-func (app *App) saveDocument(preDoc *engine.UserDocumentData) ([]byte, error) {
-	doc, err := app.engine.SaveDocument(preDoc)
-	if err != nil {
-		return nil, err
-	}
-	docID, err := app.createDocID(doc)
-	if err != nil {
-		return nil, apperr.DBError{Inner: err}
-	}
-	return docID, nil
-}
-
-func (app *App) getDocument(docID []byte) (engine.DocumentRender, error) {
-	key, err := app.docIDMapping.Load(docID)
-	if err != nil {
-		return nil, err
-	}
-	if key == nil {
+	if data == nil {
 		return nil, nil
 	}
-	return app.engine.LoadDocumentRender(key)
-}
 
-func newStatikFs() http.FileSystem {
-	log.Printf("[INFO] use assets embedded to binary")
-	statikFS, err := fs.New()
+	rdoc, err := app.converter.Convert(data, meta["syntax"])
 	if err != nil {
-		log.Fatalf("[ERROR] no embedded assets loaded, %s", err)
-		return nil
+		return nil, err
 	}
-	return statikFS
+	createTime := time.Time{}
+	err = createTime.UnmarshalText([]byte(meta["create_time"]))
+	if err != nil {
+		log.Printf("[ERROR] can't parse time from metadata: %q: %s", meta["create_time"], err.Error())
+	}
+	doc := &Document{Document: *rdoc, DocId: docID, CreateTime: createTime}
+	return doc, nil
 }
 
-func newLocalFs(localPath string) http.FileSystem {
+func createStorage(storageSpec string) (Store, error){
+	typeAndOptions := strings.SplitN(storageSpec, ":", 2)
+	if len(typeAndOptions) != 2 {
+		return nil, errors.Errorf("error parse storage specification %q", storageSpec)
+	}
+	if typeAndOptions[0] == "local" {
+		dbFile := path.Join(typeAndOptions[1], "data.bdb")
+		log.Printf("[INFO] creating local storage, data file %q", dbFile)
+		return store.NewBoltStorage(dbFile)
+	}
+	if typeAndOptions[0] == "s3" {
+		s3conf := store.S3Config{}
+		err := json.Unmarshal([]byte(typeAndOptions[1]), &s3conf)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error parse s3 config")
+		}
+		log.Printf("[INFO] using s3 storage, endpoint %q, bucket %q", s3conf.Endpoint, s3conf.Bucket)
+		return store.NewS3Storage(s3conf)
+	}
+	return nil, errors.Errorf("unknown storage type %q", typeAndOptions[0])
+}
+
+//go:embed assets/*
+var embeddedStaticFS embed.FS
+
+func newEmbeddedFs() fs.FS {
+	log.Printf("[INFO] use assets embedded to binary")
+
+	embFs, err := fs.Sub(embeddedStaticFS, "assets")
+	if err != nil {
+		log.Fatal("[ERROR] can't load static files from assets")
+	}
+	return embFs
+}
+
+func newLocalFs(localPath string) fs.FS {
 	log.Printf("[INFO] use assets from local directory %q", localPath)
-	statikFS := http.Dir(localPath)
-	return statikFS
+	localFS := os.DirFS(localPath)
+	return localFS
 }

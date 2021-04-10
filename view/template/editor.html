@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ .Title }}</title>
+    <meta name="title" content="{{ .Title }}">
+    <meta name="description" content="Create pretty markdown page">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    {{- template "default_og" "/create"}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/public/style.css">
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+</head>
+<body>
+    <header>{{ template "title_header" }}</header>
+    <div class="form-block text-edit-block">
+        {{- if .Msg }}<p>{{ .Msg }}</p>{{ end }}
+        <form class="text-edit-form" action="/create" method="post" autocomplete="off" target="_blank">
+            <!--
+            <div class="top-send-text">
+                <select name="syntax" id="syntax-select" class="custom-select">
+                    <option value="">Plain Text</option>
+                    <option value="markdown">Markdown Page</option>
+                </select>
+                <hr/>
+            </div>
+            -->
+            <input type="hidden" name="type" value="text">
+            <textarea name="data" maxlength="20000" placeholder="# paste text here…" required autofocus>{{ .InitialText }}</textarea>
+            <div class="text-edit-form-controls">
+                <button class="btn-send-text" formtarget="_self" type="submit">
+                    send <i class="fa fa-paper-plane" aria-hidden="true"></i>
+                </button>
+                <button class="btn-preview-text" formtarget="_blank" formaction="/preview" type="submit">
+                    <i class="fa fa-eye" aria-hidden="true"></i>
+                </button>
+
+                <details class="settings">
+                    <summary class="settings light-text">Select syntax</summary>
+                    <select name="syntax" id="syntax-select" class="custom-select">
+                        <option value="">Plain Text</option>
+                        <option value="markdown">Markdown Page</option>
+                    </select>
+                </details>
+                <div style="flex-grow: 1;"></div>
+                <div class="light-text"><a href="/about">about</a></div>
+                {{- template "settings" }}
+            </div>
+        </form>
+    </div>
+</body>
+</html>

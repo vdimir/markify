@@ -1,28 +1,26 @@
 package app
 
 import (
+	"fmt"
 	"path"
 	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vdimir/markify/app/apperr"
-	"github.com/vdimir/markify/app/engine"
-	"github.com/vdimir/markify/fetch"
 	"github.com/vdimir/markify/testutil"
 )
 
 const testDataPath = "../testdata"
 
-func createNewTestApp(t *testing.T, tc *TestConfig) (tapp *App, teardown func()) {
+func createNewTestApp(t *testing.T) (tapp *App, teardown func()) {
 	tmpPath, tmpFolderClean := testutil.GetTempFolder(t, "test_app")
 
 	tapp, err := NewApp(&Config{
 		Debug:        false,
-		AssetsPrefix: "../assets",
-		DBPath:       tmpPath,
-	}, tc)
+		AssetsPrefix: "assets",
+		StorageSpec:  fmt.Sprintf("local:%s", tmpPath),
+	})
 	assert.NoError(t, err)
 
 	return tapp, tmpFolderClean
@@ -34,84 +32,29 @@ func checkURLHash(t *testing.T, urlHash []byte) {
 	assert.Truef(t, m, "unexpected url path %q", string(urlHash))
 }
 
-func TestNewURLPage(t *testing.T) {
+func TestNewMarkdownPage(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
-	tc := &TestConfig{
-		fetcher: fetch.NewMock(),
-	}
 
-	tapp, teardown := createNewTestApp(t, tc)
+	tapp, teardown := createNewTestApp(t)
 	defer teardown()
 	require.NotNil(tapp)
 
 	mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
-
-	tc.fetcher.(*fetch.Mock).SetData("http://foo.bar/page.md", mdData)
-	tc.fetcher.(*fetch.Mock).SetData("http://gist.github.com/abc/raw", mdData)
-	tc.fetcher.(*fetch.Mock).SetData("file:///home/page.md", mdData)
-
-	userURLInput := func(path string) *engine.UserDocumentData {
-		return &engine.UserDocumentData{
-			Data:  []byte(path),
-			IsURL: true,
-		}
-	}
-	urlHash, err := tapp.saveDocument(userURLInput("http://foo.bar/page.md"))
+	key, err := tapp.savePaste(&CreatePasteRequest{Text: string(mdData), Syntax: "markdown"})
 	assert.NoError(err)
-	checkURLHash(t, urlHash)
-	doc, err := tapp.getDocument(urlHash)
-	assert.NoError(err)
-	assert.Regexp(regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), doc.HTMLBody())
-	assert.Regexp(regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), doc.HTMLBody())
-	assert.Regexp(regexp.MustCompile("Ok"), doc.HTMLBody())
-
-	_, err = tapp.saveDocument(userURLInput("http://goo.gl/page.md"))
-	assert.Error(err)
-	assert.IsType(apperr.UserError{}, err)
-
-	_, err = tapp.saveDocument(userURLInput("gist.github.com/abc/raw"))
-	assert.NoError(err)
-	checkURLHash(t, urlHash)
-
-	_, err = tapp.saveDocument(userURLInput("file:///home/page.md"))
-	assert.Error(err)
-	assert.IsType(apperr.UserError{}, err)
-
-	_, err = tapp.saveDocument(userURLInput("{}dsfsdfa}"))
-	assert.Error(err)
-	assert.IsType(apperr.UserError{}, err)
-}
-
-func TestNewTextPage(t *testing.T) {
-	require := require.New(t)
-	assert := assert.New(t)
-	tc := &TestConfig{
-		fetcher: fetch.NewMock(),
-	}
-
-	tapp, teardown := createNewTestApp(t, tc)
-	defer teardown()
-	require.NotNil(tapp)
-
-	mdData := testutil.MustReadData(t, path.Join(testDataPath, "page.md"))
-	key, err := tapp.saveDocument(engine.NewUserDocumentData(mdData))
-	assert.NoError(err)
-
-	doc, err := tapp.getDocument(key)
-	assert.NoError(err)
-	assert.Regexp(regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), doc.HTMLBody())
-	assert.Regexp(regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), doc.HTMLBody())
-	assert.Regexp(regexp.MustCompile("Ok"), doc.HTMLBody())
-
 	{
-		key, err := tapp.saveDocument(engine.NewUserDocumentData([]byte("   ")))
-		assert.Error(err)
-		assert.Nil(key)
+		doc, err := tapp.getDocument(key)
+		require.NoError(err)
+		require.NotNil(doc)
+		assert.Regexp(regexp.MustCompile("<h1[a-z\"= ]*>Header</h1>"), doc.Body)
+		assert.Regexp(regexp.MustCompile("<h2[a-z\"= ]*>Subheader</h2>"), doc.Body)
+		assert.Regexp(regexp.MustCompile("Ok"), doc.Body)
 	}
 	{
-		key, err := tapp.saveDocument(engine.NewUserDocumentData([]byte("<p>abc</p>\n<div>def</div>")))
-		assert.Error(err)
-		assert.Nil(key)
+		unexistingKey := "__deadbeef__"
+		doc, err := tapp.getDocument(unexistingKey)
+		require.NoError(err)
+		require.Nil(doc)
 	}
 }

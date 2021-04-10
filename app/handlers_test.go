@@ -33,7 +33,7 @@ func TestHandlersDirectCall(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
 
-	tapp, teardown := createNewTestApp(t, nil)
+	tapp, teardown := createNewTestApp(t)
 	defer teardown()
 	require.NotNil(tapp)
 
@@ -48,12 +48,11 @@ func TestHandlersDirectCall(t *testing.T) {
 	})
 
 	checkHandlerResp(t, "robots.txt", tapp.handleRobotsTxt, checkStatusOk)
-	checkHandlerResp(t, "url", tapp.handlePageInputURL, checkStatusOk)
 	checkHandlerResp(t, "compose", tapp.handlePageTextInput, checkStatusOk)
 }
 
 func TestRoutes(t *testing.T) {
-	tapp, teardown := createNewTestApp(t, nil)
+	tapp, teardown := createNewTestApp(t)
 	defer teardown()
 
 	ts := httptest.NewServer(tapp.Routes())

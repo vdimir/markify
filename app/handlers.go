@@ -3,14 +3,16 @@ package app
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/vdimir/markify/app/apperr"
-	"github.com/vdimir/markify/app/view"
+	"github.com/vdimir/markify/view"
 )
 
 const defaultTitle = "markify"
@@ -38,12 +40,10 @@ func (app *App) Routes() *chi.Mux {
 	r.Get("/", app.handlePageIndex)
 
 	r.Get("/p/{pageID}", app.handleViewPageDoc)
+	r.Get("/p/{pageID}/text", app.handleViewPlainText)
 
-	r.Get("/link", app.handlePageInputURL)
-	r.Post("/link", app.handleCreateDocument)
-
-	r.Get("/compose", app.handlePageTextInput)
-	r.Post("/compose", app.handleCreateDocument)
+	r.Get("/create", app.handlePageTextInput)
+	r.Post("/create", app.handleCreateDocument)
 
 	r.Post("/preview", app.handlePagePreview)
 	r.Get("/preview", app.notFound)
@@ -60,12 +60,6 @@ func (app *App) handlePageIndex(w http.ResponseWriter, r *http.Request) {
 	app.handlePageTextInput(w, r)
 }
 
-func (app *App) handlePageInputURL(w http.ResponseWriter, r *http.Request) {
-	ctx := &view.URLPromptContext{
-		Title: defaultTitle,
-	}
-	app.viewTemplate(http.StatusOK, ctx, w)
-}
 
 func (app *App) handlePageTextInput(w http.ResponseWriter, r *http.Request) {
 	ctx := &view.EditorContext{
@@ -75,37 +69,21 @@ func (app *App) handlePageTextInput(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) handleCreateDocument(w http.ResponseWriter, r *http.Request) {
-	createReq := parseUserInput(r)
-	docID, err := app.saveDocument(createReq)
+	req, err := app.parseAndValidateRequest(r)
 	if err != nil {
-		if errUser, ok := err.(apperr.UserError); ok {
-			var returnToPageCtx view.TemplateContext
-			if createReq.IsURL {
-				returnToPageCtx = &view.URLPromptContext{
-					Title: fmt.Sprintf("%s :(", defaultTitle),
-					Msg:   errUser.String(),
-				}
-			} else {
-				returnToPageCtx = &view.EditorContext{
-					Title:       fmt.Sprintf("%s :(", defaultTitle),
-					Msg:         errUser.String(),
-					InitialText: string(createReq.Data),
-				}
-			}
-			app.viewTemplate(http.StatusBadRequest, returnToPageCtx, w)
-		} else {
-			app.serverError(err, w)
-		}
+		app.respondError(err, req, w)
+		return
+	}
+	docID, err := app.savePaste(req)
+	if err != nil {
+		app.respondError(err, req, w)
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/p/%s", docID), 302)
 }
 
 func (app *App) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
-	allowedPaths := []string{
-		"/$", "/help$",
-		"/p/*",
-	}
+	allowedPaths := []string{"/$", "/about$", "/info/*"}
 	buf := bytes.NewBufferString("User-agent: *\nDisallow: /\n")
 	for _, path := range allowedPaths {
 		buf.WriteString(fmt.Sprintf("Allow: %s\n", path))
@@ -114,27 +92,31 @@ func (app *App) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) handlePagePreview(w http.ResponseWriter, r *http.Request) {
-	createReq := parseUserInput(r)
-	doc, err := app.engine.CreateDocument(createReq)
+	createReq, err := app.parseAndValidateRequest(r)
 	if err != nil {
-		if errUser, ok := err.(apperr.UserError); ok {
-			ctx := &view.StatusContext{
-				Title:     "markify",
-				HeaderMsg: "markify :(",
-				Msg:       errUser.UserMsg,
-			}
-			app.viewTemplate(http.StatusBadRequest, ctx, w)
-		} else {
-			app.serverError(err, w)
-		}
+		app.respondError(err, createReq, w)
 		return
 	}
-	app.viewDocument(doc, "Preview", "", w)
+	if err = app.converter.SupportSyntax(createReq.Syntax); err != nil {
+		ctx := &view.StatusContext{
+			Title:     "markify",
+			HeaderMsg: "markify",
+			Msg:       err.Error(),
+		}
+		app.viewTemplate(http.StatusBadRequest, ctx, w)
+	}
+
+	doc, err := app.converter.Convert(strings.NewReader(createReq.Text), createReq.Syntax)
+	if err != nil {
+		app.serverError(err, w)
+		return
+	}
+	app.viewDocument(&Document{*doc, "",time.Time{}}, "Preview", "", w)
 }
 
 func (app *App) handleViewPageDoc(w http.ResponseWriter, r *http.Request) {
 	pageID := chi.URLParam(r, "pageID")
-	doc, err := app.getDocument([]byte(pageID))
+	doc, err := app.getDocument(pageID)
 	if err != nil {
 		app.serverError(err, w)
 		return
@@ -146,6 +128,25 @@ func (app *App) handleViewPageDoc(w http.ResponseWriter, r *http.Request) {
 	app.viewDocument(doc, "", r.URL.Path, w)
 }
 
+func (app *App) handleViewPlainText(w http.ResponseWriter, r *http.Request) {
+	pageID := chi.URLParam(r, "pageID")
+	data, _, err := app.blobStore.GetBlob(pageID)
+	if err != nil {
+		app.serverError(err, w)
+		return
+	}
+	if data == nil {
+		app.notFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, err = io.Copy(w, data)
+	if err != nil {
+		log.Printf("[ERROR] can't write response: %s", err.Error())
+		return
+	}
+}
+
 func (app *App) notFound(w http.ResponseWriter, r *http.Request) {
 	ctx := &view.StatusContext{
 		Title:     "Not Found",
@@ -153,4 +154,16 @@ func (app *App) notFound(w http.ResponseWriter, r *http.Request) {
 		Msg:       "Page Not Found",
 	}
 	app.viewTemplate(http.StatusNotFound, ctx, w)
+}
+
+func (app *App) parseAndValidateRequest(r *http.Request) (*CreatePasteRequest, error) {
+	req, err := ParseCreatePasteRequest(r)
+	if err != nil {
+		return nil, WrapfUserError(err, err.Error())
+	}
+	err = app.validatePasteRequest(req)
+	if err != nil {
+		return nil, WrapfUserError(err, err.Error())
+	}
+	return req, nil
 }
