@@ -1,9 +1,7 @@
 name: test
 on:
   push:
-    branches: [master]
   pull_request:
-    branches: [master]
 
 jobs:
   gotest:
@@ -27,6 +25,7 @@ jobs:
           go test -timeout=60s -covermode=count -coverprofile=$GITHUB_WORKSPACE/profile.cov ./...
 
     - name: Submit goveralls
+      if: github.ref == 'refs/heads/main'
       run: |
         go get -u github.com/mattn/goveralls
         $(go env GOPATH)/bin/goveralls -service="github" -coverprofile=$GITHUB_WORKSPACE/profile.cov
