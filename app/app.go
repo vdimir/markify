@@ -168,7 +168,9 @@ func (app *App) savePaste(req *CreatePasteRequest) (string, error) {
 	docID := util.Base58UID(defaultURLHashLen)
 
 	meta := map[string]string{}
-	meta["user"] = req.UserToken
+	if req.UserToken != "" {
+		meta["user"] = req.UserToken
+	}
 	meta["syntax"] = req.Syntax
 	timeStr, err := time.Now().UTC().MarshalText()
 	if err != nil {
