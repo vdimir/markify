@@ -17,21 +17,10 @@
     <header>{{ template "title_header" }}</header>
     <div class="form-block text-edit-block">
         {{- if .Msg }}<p class="editor-top-message">{{ .Msg }}</p><hr/>{{ end }}
-        <form class="text-edit-form" action="/create" method="post" autocomplete="off" target="_blank">
-            <!--
-            <div class="top-send-text">
-                <select name="syntax" id="syntax-select" class="custom-select">
-                    <option value="">Plain Text</option>
-                    <option value="markdown">Markdown Page</option>
-                </select>
-                <hr/>
-            </div>
-            -->
-            <div id="input-text-editor"></div>
-            <!--
-            <textarea name="data" maxlength="20000" placeholder="# paste text here…" required autofocus>{{ .InitialText }}</textarea>
-            -->
-            <div class="text-edit-form-controls">
+        <form id="editor-form" class="text-edit-form" action="/create" method="post" autocomplete="off" target="_blank">
+            <div id="main-text-area" hidden="true"></div>
+            <textarea id="simple-text-area" name="data" maxlength="20000" placeholder="# paste text here…" required autofocus>{{ .InitialText }}</textarea>
+            <div class="text-edit-form-controls" >
                 <button class="btn-send-text" formtarget="_self" type="submit">
                     send <i class="fa fa-paper-plane" aria-hidden="true"></i>
                 </button>
