@@ -602,4 +602,8 @@ footer * a:hover {
     color: #434343;
 }
 
-@import "code_mirror.less";
+.xxx {
+    display: inline;
+}
+
+@import "code_mirror.scss";

@@ -5,8 +5,8 @@
     "@codemirror/state": "^0.18.6",
     "@codemirror/view": "^0.18.7",
     "@rollup/plugin-node-resolve": "^11.2.1",
-    "less": "^3.13.1",
     "rollup": "^2.45.2",
-    "rollup-plugin-less": "https://github.com/vdimir/rollup-plugin-less/releases/download/1.1.4/rollup-plugin-less-1.1.4.tgz"
+    "rollup-plugin-scss": "^2.6.1",
+    "scss": "^0.2.4"
   }
 }
