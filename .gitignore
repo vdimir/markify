@@ -29,3 +29,8 @@
 
 # coveralls profile
 *.cov
+
+node_modules/
+
+app/assets/public/*.js
+app/assets/public/*.css

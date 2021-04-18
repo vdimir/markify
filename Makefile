@@ -11,8 +11,9 @@ test:
 build: test
 	go build -o ${EXE_NAME} ./
 
-.PHONY: run
-run:
+.PHONY: rundev
+rundev:
+	rollup -wc ./view/public/rollup.config.js &
 	go run ./ --debug --host=localhost --admin_secret 'admin'
 
 .PHONY: docker

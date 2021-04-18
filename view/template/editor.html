@@ -9,13 +9,14 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     {{- template "default_og" "/create"}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet"> 
     <link rel="stylesheet" href="/public/style.css">
-    <script async defer src="https://buttons.github.io/buttons.js"></script>
 </head>
 <body>
     <header>{{ template "title_header" }}</header>
     <div class="form-block text-edit-block">
-        {{- if .Msg }}<p>{{ .Msg }}</p>{{ end }}
+        {{- if .Msg }}<p class="editor-top-message">{{ .Msg }}</p><hr/>{{ end }}
         <form class="text-edit-form" action="/create" method="post" autocomplete="off" target="_blank">
             <!--
             <div class="top-send-text">
@@ -26,8 +27,10 @@
                 <hr/>
             </div>
             -->
-            <input type="hidden" name="type" value="text">
+            <div id="input-text-editor"></div>
+            <!--
             <textarea name="data" maxlength="20000" placeholder="# paste text here…" required autofocus>{{ .InitialText }}</textarea>
+            -->
             <div class="text-edit-form-controls">
                 <button class="btn-send-text" formtarget="_self" type="submit">
                     send <i class="fa fa-paper-plane" aria-hidden="true"></i>
@@ -45,9 +48,9 @@
                 </details>
                 <div style="flex-grow: 1;"></div>
                 <div class="light-text"><a href="/about">about</a></div>
-                {{- template "settings" }}
             </div>
         </form>
     </div>
+    <script src="public/editor.bundle.js"></script>
 </body>
 </html>
