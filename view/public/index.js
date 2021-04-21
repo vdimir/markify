@@ -2,9 +2,7 @@
 import {EditorState} from "@codemirror/state"
 import {EditorView, keymap, placeholder} from "@codemirror/view"
 import {defaultKeymap} from "@codemirror/commands"
-import Swal from 'sweetalert2'
 
-import '@sweetalert2/theme-minimal/minimal.css'
 import './styles/index.scss';
 
 
