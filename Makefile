@@ -13,7 +13,7 @@ build: test
 
 .PHONY: run
 run:
-	go run ./ --debug --host=localhost
+	go run ./ --debug --host=localhost --admin_secret 'admin'
 
 .PHONY: docker
 docker:

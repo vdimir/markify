@@ -20,6 +20,7 @@ func createNewTestApp(t *testing.T) (tapp *App, teardown func()) {
 		Debug:        false,
 		AssetsPrefix: "assets",
 		StorageSpec:  fmt.Sprintf("local:%s", tmpPath),
+		StatusText:   `{"status": "ok"}`,
 	})
 	assert.NoError(t, err)
 

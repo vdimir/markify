@@ -4,8 +4,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"github.com/vdimir/markify/render"
-	"github.com/vdimir/markify/store"
 	"html/template"
 	"io"
 	"io/fs"
@@ -17,6 +15,9 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/vdimir/markify/render"
+	"github.com/vdimir/markify/store"
 
 	"github.com/pkg/errors"
 	"github.com/vdimir/markify/util"
@@ -32,7 +33,9 @@ type Config struct {
 	AssetsPrefix string
 	StorageSpec  string
 	StatusText   string
-	UIDSecret    string // secret key to generate user ids
+
+	AdminPassword string
+	UIDSecret     string // secret key to generate user ids
 }
 
 type Store interface {
@@ -55,7 +58,7 @@ type App struct {
 
 type Document struct {
 	render.Document
-	DocId string
+	DocId      string
 	CreateTime time.Time
 }
 
@@ -155,7 +158,7 @@ func (app *App) viewDocument(
 		Title:  title,
 		Body:   template.HTML(doc.Body),
 		OgInfo: ogInfo,
-		DocId: doc.DocId,
+		DocId:  doc.DocId,
 	}
 	if !doc.CreateTime.IsZero() {
 		docView.CreateTime = doc.CreateTime.Format("Jan 2 15:04:05 2006 MST")
@@ -204,7 +207,7 @@ func (app *App) getDocument(docID string) (*Document, error) {
 	return doc, nil
 }
 
-func createStorage(storageSpec string) (Store, error){
+func createStorage(storageSpec string) (Store, error) {
 	typeAndOptions := strings.SplitN(storageSpec, ":", 2)
 	if len(typeAndOptions) != 2 {
 		return nil, errors.Errorf("error parse storage specification %q", storageSpec)

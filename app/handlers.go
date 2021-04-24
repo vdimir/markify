@@ -35,6 +35,9 @@ func (app *App) Routes() *chi.Mux {
 	app.addFixedPages(r)
 
 	r.Get("/_ping", app.handlePing)
+	r.Get("/ping", app.handlePing)
+	r.Get("/_admin/unload", app.handleUnload)
+
 	r.Get("/robots.txt", app.handleRobotsTxt)
 
 	r.Get("/", app.handlePageIndex)
@@ -53,13 +56,39 @@ func (app *App) Routes() *chi.Mux {
 
 func (app *App) handlePing(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	if app.cfg.StatusText == "" {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"status":"unloaded"}`))
+		return
+	}
+
 	w.Write([]byte(app.cfg.StatusText))
+}
+
+func (app *App) handleUnload(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+
+	authHeader := r.Header.Get("Authorization")
+
+	validPass := app.cfg.AdminPassword != "" &&
+		strings.HasPrefix(authHeader, "Basic ") &&
+		strings.TrimPrefix(authHeader, "Basic ") == app.cfg.AdminPassword
+
+	if !validPass {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Unauthorized"))
+		return
+	}
+
+	app.cfg.StatusText = ""
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Ok"))
 }
 
 func (app *App) handlePageIndex(w http.ResponseWriter, r *http.Request) {
 	app.handlePageTextInput(w, r)
 }
-
 
 func (app *App) handlePageTextInput(w http.ResponseWriter, r *http.Request) {
 	ctx := &view.EditorContext{
@@ -111,7 +140,7 @@ func (app *App) handlePagePreview(w http.ResponseWriter, r *http.Request) {
 		app.serverError(err, w)
 		return
 	}
-	app.viewDocument(&Document{*doc, "",time.Time{}}, "Preview", "", w)
+	app.viewDocument(&Document{*doc, "", time.Time{}}, "Preview", "", w)
 }
 
 func (app *App) handleViewPageDoc(w http.ResponseWriter, r *http.Request) {
