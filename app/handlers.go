@@ -34,7 +34,7 @@ func (app *App) Routes() *chi.Mux {
 	app.addFileServer(r, "public")
 	app.addFixedPages(r)
 
-	r.Get("/ping", app.handlePing)
+	r.Get("/_ping", app.handlePing)
 	r.Get("/robots.txt", app.handleRobotsTxt)
 
 	r.Get("/", app.handlePageIndex)
