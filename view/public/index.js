@@ -12,6 +12,7 @@ import './styles/index.scss';
         throw '"main-text-area" not found!'
     }
     buildEditor(editorRoot)
+    setupEventLisners()
 })()
 
 /// Replace html textarea with CodeMirror editor, setup button listeners
@@ -38,12 +39,28 @@ function buildEditor(editorRoot) {
     view.focus();
 }
 
+function setupEventLisners() {
+    document.getElementsByClassName('alert-message')[0].addEventListener('click', () => showAlert(false) )
+}
+
+export function showAlert(msg) {
+    const boxClassName = "editor-top-box";
+    const contentClassName = "alert-message";
+    if (msg === false) {
+        document.getElementsByClassName(boxClassName)[0].classList.remove('visible')
+        return;
+    }
+
+    document.getElementsByClassName(contentClassName)[0].innerHTML = msg;
+    document.getElementsByClassName(boxClassName)[0].classList.add('visible')
+}
+
 function onDataSubmit(view) {
     return e => {
         e.preventDefault()
         let data = view.state.doc.toString();
         if (!/\S/.test(data)) {
-            Swal.fire('Oops...', 'Insert some text')
+            showAlert("Insert some text!")
             return false
         }
         fetch("/create", {
@@ -57,7 +74,7 @@ function onDataSubmit(view) {
             }
             throw resp.statusText
         }).catch(_error => {
-            Swal.fire('Oops...', 'Something went wrong!')
+            showAlert("Something went wrong")
         });
         return false
     }
