@@ -13,8 +13,11 @@ build: test
 
 .PHONY: rundev
 rundev:
-	rollup -wc ./view/public/rollup.config.js &
 	go run ./ --debug --host=localhost --admin_secret 'admin'
+
+.PHONY: front
+front:
+	rollup -wc ./view/public/rollup.config.js
 
 .PHONY: docker
 docker:

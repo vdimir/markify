@@ -16,16 +16,19 @@
 <body>
     <header>{{ template "title_header" }}</header>
     <div class="form-block text-edit-block">
+    <div class="content" style="display: none;"></div>
         <div class="editor-top-box{{- if .Msg }} visible{{ end }}"><div class="alert-message">{{ .Msg }}</div></div>
         <form id="editor-form" class="text-edit-form" action="/create" method="post" autocomplete="off" target="_blank">
-            <div id="main-text-area" hidden="true"></div>
-            <textarea id="simple-text-area" name="data" maxlength="20000" placeholder="# paste text here…" required autofocus>{{ .InitialText }}</textarea>
-
+            <div id="preview-content" style="display: none;"></div>
+            <div id="root-textarea">
+                <div id="main-text-area" hidden="true"></div>
+                <textarea id="simple-text-area" name="data" maxlength="20000" placeholder="# paste text here…" required autofocus>{{ .InitialText }}</textarea>
+            </div>
             <div class="text-edit-form-controls" >
                 <button class="btn-send-text" formtarget="_self" type="submit">
                     send <i class="fa fa-paper-plane" aria-hidden="true"></i>
                 </button>
-                <button class="btn-preview-text" formtarget="_blank" formaction="/preview" type="submit">
+                <button class="btn-preview-text" type="button">
                     <i class="fa fa-eye" aria-hidden="true"></i>
                 </button>
 

@@ -58,8 +58,8 @@ func (app *App) Shutdown() {
 func (app *App) respondError(err error, req *CreatePasteRequest, w http.ResponseWriter) {
 	if errUser, ok := err.(UserError); ok {
 		returnToPageCtx := &view.EditorContext{
-			Title:       fmt.Sprintf("%s :(", defaultTitle),
-			Msg:         errUser.String(),
+			Title: fmt.Sprintf("%s :(", defaultTitle),
+			Msg:   errUser.String(),
 		}
 		if req != nil {
 			returnToPageCtx.InitialText = req.Text
@@ -119,7 +119,7 @@ func (app *App) addFixedPages(r chi.Router) {
 			if err != nil {
 				panic(err)
 			}
-			app.viewDocument(&Document{*doc, "",time.Time{}}, "", r.URL.Path, w)
+			app.viewDocument(&Document{*doc, "", time.Time{}}, "", r.URL.Path, w)
 		}
 		return handler
 	}
@@ -131,7 +131,7 @@ func (app *App) addFixedPages(r chi.Router) {
 			return err
 		}
 		handler := func(w http.ResponseWriter, r *http.Request) {
-			app.viewDocument(&Document{*doc, "",time.Time{}}, "", r.URL.Path, w)
+			app.viewDocument(&Document{*doc, "", time.Time{}}, "", r.URL.Path, w)
 		}
 
 		if app.cfg.Debug {

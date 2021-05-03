@@ -1,10 +1,10 @@
 package render
 
 import (
-	"github.com/pkg/errors"
-	"github.com/vdimir/markify/render/markdown"
 	"io"
 	"io/ioutil"
+
+	"github.com/vdimir/markify/render/markdown"
 )
 
 type Document struct {
@@ -23,13 +23,6 @@ func NewConverter() *DocConverter {
 		md:   markdown.NewConverter(),
 		code: &plainText{},
 	}
-}
-
-func (r *DocConverter) SupportSyntax(syntax string) error {
-	if syntax == "markdown" || syntax == "" {
-		return nil
-	}
-	return errors.Errorf("syntax %q is not supported", syntax)
 }
 
 func (r *DocConverter) Convert(reader io.Reader, syntax string) (*Document, error) {

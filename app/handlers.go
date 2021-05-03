@@ -34,6 +34,12 @@ func (app *App) Routes() *chi.Mux {
 	app.addFileServer(r, "public")
 	app.addFixedPages(r)
 
+	r.Route("/api", func(rapi chi.Router) {
+		rapi.Post("/preview", app.handleApiPreview)
+		rapi.Post("/create", app.handleApiCreateDocument)
+		rapi.NotFound(app.handleApiNotFound)
+	})
+
 	r.Get("/_ping", app.handlePing)
 	r.Get("/ping", app.handlePing)
 	r.Get("/_admin/unload", app.handleUnload)
@@ -126,15 +132,6 @@ func (app *App) handlePagePreview(w http.ResponseWriter, r *http.Request) {
 		app.respondError(err, createReq, w)
 		return
 	}
-	if err = app.converter.SupportSyntax(createReq.Syntax); err != nil {
-		ctx := &view.StatusContext{
-			Title:     "markify",
-			HeaderMsg: "markify",
-			Msg:       err.Error(),
-		}
-		app.viewTemplate(http.StatusBadRequest, ctx, w)
-	}
-
 	doc, err := app.converter.Convert(strings.NewReader(createReq.Text), createReq.Syntax)
 	if err != nil {
 		app.serverError(err, w)
@@ -186,7 +183,7 @@ func (app *App) notFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) parseAndValidateRequest(r *http.Request) (*CreatePasteRequest, error) {
-	req, err := ParseCreatePasteRequest(r)
+	req, err := parseCreateRequestForm(r)
 	if err != nil {
 		return nil, WrapfUserError(err, err.Error())
 	}

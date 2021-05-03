@@ -16,6 +16,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	chirender "github.com/go-chi/render"
+
 	"github.com/vdimir/markify/render"
 	"github.com/vdimir/markify/store"
 
@@ -118,10 +120,24 @@ func (app *App) validatePasteRequest(req *CreatePasteRequest) error {
 	if app.uidGen == nil || !app.uidGen.Validate([]byte(req.UserToken)) {
 		req.UserToken = ""
 	}
-	if err := app.converter.SupportSyntax(req.Syntax); err != nil {
-		return err
-	}
 	return nil
+}
+
+func parseCreateRequestForm(r *http.Request) (*CreatePasteRequest, error) {
+	if chirender.GetRequestContentType(r) == chirender.ContentTypeForm {
+		token := ""
+		uidCookie, err := r.Cookie("user_id")
+		if err == nil {
+			token = uidCookie.Value
+		}
+		return &CreatePasteRequest{
+			Text:      r.FormValue("data"),
+			Syntax:    r.FormValue("syntax"),
+			UserToken: token,
+		}, nil
+	}
+
+	return nil, errors.Errorf("can't parse create request: unknown content type %q", r.Header.Get("Content-Type"))
 }
 
 func (app *App) concatTitle(docTitle string, customTitle string) string {
@@ -180,8 +196,8 @@ func (app *App) savePaste(req *CreatePasteRequest) (string, error) {
 		return "", err
 	}
 	meta["create_time"] = string(timeStr)
-	meta["ttl"] = req.Ttl.String()
-	err = app.blobStore.SetBlob(string(docID), strings.NewReader(req.Text), meta, req.Ttl)
+	meta["ttl"] = req.TTL.String()
+	err = app.blobStore.SetBlob(string(docID), strings.NewReader(req.Text), meta, req.TTL)
 	return string(docID), err
 }
 

@@ -601,8 +601,17 @@ footer * a:hover {
     color: #434343;
 }
 
+.hidden {
+    overflow: hidden;
+    height: 0;
+    opacity: 0;
+    transition: height 400ms, opacity 400ms 0ms;
+    position: relative;
+}
+
 .editor-top-box {
     padding-top: 1pt;
+
     overflow: hidden;
     height: 0;
     opacity: 0;
@@ -624,6 +633,11 @@ footer * a:hover {
     height: 100%;
     opacity: 1;
     transition: height 400ms, opacity 400ms 0ms;
+}
+
+#preview-content {
+    padding: 10px 15px;
+    margin: 10px 0;
 }
 
 @import "code_mirror.scss";
