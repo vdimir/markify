@@ -44,6 +44,7 @@ function buildEditor(editorRoot) {
 function setupEventLisners(editorView) {
     document.getElementsByClassName('alert-message')[0].addEventListener('click', () => showAlert(false) )
     document.getElementsByClassName('btn-preview-text')[0].addEventListener('click', () => previewToggle(editorView) )
+    document.getElementById('preview-content').addEventListener('dblclick', () => previewToggle(editorView) )
 }
 
 function showAlert(msg) {
