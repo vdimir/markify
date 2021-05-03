@@ -1,15 +1,15 @@
 
-import {EditorState} from "@codemirror/state"
-import {EditorView, keymap, placeholder} from "@codemirror/view"
-import {defaultKeymap} from "@codemirror/commands"
+import {EditorState} from '@codemirror/state'
+import {EditorView, keymap, placeholder} from '@codemirror/view'
+import {defaultKeymap} from '@codemirror/commands'
 
 import './styles/index.scss';
 
 
 (function () {
-    let editorRoot = document.getElementById("main-text-area")
+    let editorRoot = document.getElementById('main-text-area')
     if (!editorRoot) {
-        throw '"main-text-area" not found!'
+        throw 'editor root not found'
     }
     let editorView = buildEditor(editorRoot);
     setupEventLisners(editorView)
@@ -17,11 +17,11 @@ import './styles/index.scss';
 
 /// Replace html textarea with CodeMirror editor, setup button listeners
 function buildEditor(editorRoot) {
-    let originalTextField = document.getElementById("simple-text-area")
+    let originalTextField = document.getElementById('simple-text-area')
 
     let startState = EditorState.create({
         doc: originalTextField.textContent,
-        extensions: [keymap.of(defaultKeymap), placeholder("# paste text here…")]
+        extensions: [keymap.of(defaultKeymap), placeholder('# paste text here…')]
     })
 
     let view = new EditorView({
@@ -33,8 +33,6 @@ function buildEditor(editorRoot) {
     originalTextField.hidden = true
     editorRoot.hidden = false
 
-    let editorForm = document.getElementById("editor-form")
-    editorForm.onsubmit = onDataSubmit(view)
 
     view.focus();
     
@@ -42,14 +40,17 @@ function buildEditor(editorRoot) {
 }
 
 function setupEventLisners(editorView) {
-    document.getElementsByClassName('alert-message')[0].addEventListener('click', () => showAlert(false) )
-    document.getElementsByClassName('btn-preview-text')[0].addEventListener('click', () => previewToggle(editorView) )
-    document.getElementById('preview-content').addEventListener('dblclick', () => previewToggle(editorView) )
+    let editorForm = document.getElementById('editor-form')
+    editorForm.onsubmit = e => { onDataSubmit(e, editorView).catch(showAlert) }
+
+    document.getElementsByClassName('alert-close')[0].addEventListener('click', () => showAlert(false) )
+    document.getElementsByClassName('btn-preview-text')[0].addEventListener('click', () => previewToggle(editorView).catch(showAlert) )
+    document.getElementById('preview-content').addEventListener('dblclick', () => previewToggle(editorView).catch(showAlert) )
 }
 
 function showAlert(msg) {
-    const boxClassName = "editor-top-box";
-    const contentClassName = "alert-message";
+    const boxClassName = 'editor-top-box';
+    const contentClassName = 'alert-message';
     if (msg === false) {
         document.getElementsByClassName(boxClassName)[0].classList.remove('visible')
         return;
@@ -59,26 +60,15 @@ function showAlert(msg) {
     document.getElementsByClassName(boxClassName)[0].classList.add('visible')
 }
 
-function formRequest(data) {
-    // TODO: How to stream data without copying?
-    return {
-        body: "data=" + data,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        method: "POST"
-    }
-}
-
 function validateInput(text) {
     if (!/\S/.test(text)) {
-        showAlert("Insert some text!")
-        return false
+        throw 'Insert some text!'
     }
-    return true
 }
 
 function displayPreview(resp) {
     let text = resp['body']
-    document.getElementById("root-textarea").style.display = 'none'
+    document.getElementById('root-textarea').style.display = 'none'
     
     let contentRoot = document.getElementById('preview-content');
     contentRoot.innerHTML = text
@@ -87,11 +77,11 @@ function displayPreview(resp) {
     document.querySelector('.btn-preview-text > .fa').classList.add('fa-eye-slash')
 }
 
-function hidePreview(editorView) {
+async function hidePreview(editorView) {
     let contentRoot = document.getElementById('preview-content');
     contentRoot.style.display = 'none';
     
-    document.getElementById("root-textarea").style.display = 'block'
+    document.getElementById('root-textarea').style.display = 'block'
     editorView.focus()
     
     document.querySelector('.btn-preview-text > .fa').classList.remove('fa-eye-slash')
@@ -102,10 +92,10 @@ function isInPreview() {
     return contentRoot.style.display != 'none';
 }
 
-function apiCall(path, body, callback) {
-    fetch(path, {
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
+async function apiCall(path, body) {
+    return fetch(path, {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify(body),
     }).then(resp => {
         if (resp.ok) {
@@ -113,39 +103,29 @@ function apiCall(path, body, callback) {
         }
         throw resp.statusText
     })
-    .then(callback)
-    .catch(err => {
-        showAlert(err)
-    });
 }
 
-function previewText(editorView) {
+async function previewText(editorView) {
     let data = editorView.state.doc.toString();
+    validateInput(data)
     
-    if (!validateInput(data)) {
-        return
-    }
-    
-    apiCall("/api/preview", {'text': data}, displayPreview)
+    displayPreview(await apiCall('/api/preview', {'text': data}))
 }
 
-function previewToggle(editorView) {
+async function previewToggle(editorView) {
     if (isInPreview()) {
-        hidePreview(editorView)
+        await hidePreview(editorView)
     } else {
-        previewText(editorView)
+        await previewText(editorView)
     }
 }
 
-function onDataSubmit(view) {
-    return e => {
-        console.log(e)
-        e.preventDefault()
-        let data = view.state.doc.toString();
-        if (!validateInput(data)) {
-            return false
-        }
-        apiCall("/api/create", {'text': data}, resp => { document.location.href = resp['path'] })
-        return false
-    }
+async function onDataSubmit(event, view) {
+    event.preventDefault()
+    let data = view.state.doc.toString();
+    validateInput(data)
+
+    let resp = await apiCall('/api/create', {'text': data})
+    document.location.href = resp['path']
+    return false
 }
