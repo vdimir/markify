@@ -17,25 +17,12 @@
     <div class="form-block text-edit-block">
         {{- if .Msg }}<p>{{ .Msg }}</p>{{ end }}
         <form class="text-edit-form" action="/create" method="post" autocomplete="off" target="_blank">
-            <!--
-            <div class="top-send-text">
-                <select name="syntax" id="syntax-select" class="custom-select">
-                    <option value="">Plain Text</option>
-                    <option value="markdown">Markdown Page</option>
-                </select>
-                <hr/>
-            </div>
-            -->
             <input type="hidden" name="type" value="text">
             <textarea name="data" maxlength="20000" placeholder="# paste text here…" required autofocus>{{ .InitialText }}</textarea>
             <div class="text-edit-form-controls">
                 <button class="btn-send-text" formtarget="_self" type="submit">
-                    send <i class="fa fa-paper-plane" aria-hidden="true"></i>
+                    Send <i class="fa fa-paper-plane" aria-hidden="true"></i>
                 </button>
-                <button class="btn-preview-text" formtarget="_blank" formaction="/preview" type="submit">
-                    <i class="fa fa-eye" aria-hidden="true"></i>
-                </button>
-
                 <details class="settings">
                     <summary class="settings light-text">Select syntax</summary>
                     <select name="syntax" id="syntax-select" class="custom-select">
