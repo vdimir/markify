@@ -184,9 +184,9 @@ func (app *App) savePaste(req *CreatePasteRequest) (string, error) {
 	meta["ttl"] = req.Ttl.String()
 	err = app.blobStore.SetBlob(string(docID), strings.NewReader(req.Text), meta, req.Ttl)
 	if err != nil {
-		log.Printf("[TRACE] document %q saved in %dms", docID, time.Since(startTime).Milliseconds())
+		log.Printf("[TRACE] document %q not saved after %dms, error: %s", docID, time.Since(startTime).Milliseconds(), err)
 	} else {
-		log.Printf("[TRACE] document %q not saved, error: %s", docID, err)
+		log.Printf("[TRACE] document %q saved in %dms", docID, time.Since(startTime).Milliseconds())
 	}
 	return string(docID), err
 }
