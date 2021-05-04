@@ -3,9 +3,11 @@ package util
 import (
 	"io/fs"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -58,4 +60,12 @@ func AddRoutePrefix(prefix string, h http.HandlerFunc) http.Handler {
 		r2.URL.Path = prefix + r2.URL.Path
 		h.ServeHTTP(w, r2)
 	})
+}
+
+// ExecTimeLogger returns function intented to be used in defer to log execution time
+func ExecTimeLogger(msg string) func() {
+	startTime := time.Now()
+	return func() {
+		log.Printf("%s in %dms", msg, time.Since(startTime).Milliseconds())
+	}
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/jessevdk/go-flags"
@@ -21,7 +22,7 @@ type Opts struct {
 }
 
 func main() {
-	fmt.Printf("Running version %s\n", revision)
+	log.Printf("[DEBUG] Starting app version %s\n", revision)
 	var opts Opts
 
 	_, err := flags.Parse(&opts)
@@ -40,8 +41,12 @@ func main() {
 	})
 
 	if err != nil {
+		log.Printf("[ERROR] App can't be created: %s", err)
 		panic(err)
 	}
 
 	appServer.StartServer(opts.Hostname, opts.Port)
+
+	log.Printf("[DEBUG] App closed")
+
 }

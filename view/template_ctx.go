@@ -31,11 +31,11 @@ type OpenGraphInfo struct {
 
 // PageContext context for page.html
 type PageContext struct {
-	Title  string
-	Body   template.HTML
-	OgInfo *OpenGraphInfo
+	Title      string
+	Body       template.HTML
+	OgInfo     *OpenGraphInfo
 	CreateTime string
-	DocId string
+	DocID      string
 }
 
 // Name of the page

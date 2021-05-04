@@ -28,7 +28,7 @@ func (app *App) Routes() *chi.Mux {
 	loggerMiddleware := middleware.RequestLogger(logFmt)
 	r.Use(loggerMiddleware)
 
-	r.Use(middleware.StripSlashes)
+	r.Use(middleware.RedirectSlashes)
 	r.Use(middleware.Recoverer)
 
 	app.addFileServer(r, "public")

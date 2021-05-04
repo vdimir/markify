@@ -58,7 +58,7 @@ type App struct {
 
 type Document struct {
 	render.Document
-	DocId      string
+	DocID      string
 	CreateTime time.Time
 }
 
@@ -109,11 +109,11 @@ var emptyTextRegex = regexp.MustCompile("^\\s*$")
 
 func (app *App) validatePasteRequest(req *CreatePasteRequest) error {
 	if !utf8.ValidString(req.Text) {
-		return errors.New("got broken input text")
+		return errors.New("broken input text")
 
 	}
 	if emptyTextRegex.MatchString(req.Text) {
-		return errors.New("got empty input")
+		return errors.New("empty input")
 	}
 	if app.uidGen == nil || !app.uidGen.Validate([]byte(req.UserToken)) {
 		req.UserToken = ""
@@ -158,7 +158,7 @@ func (app *App) viewDocument(
 		Title:  title,
 		Body:   template.HTML(doc.Body),
 		OgInfo: ogInfo,
-		DocId:  doc.DocId,
+		DocID:  doc.DocID,
 	}
 	if !doc.CreateTime.IsZero() {
 		docView.CreateTime = doc.CreateTime.Format("Jan 2 15:04:05 2006 MST")
@@ -168,6 +168,7 @@ func (app *App) viewDocument(
 
 // Validate request and save data. Returns id of created paste
 func (app *App) savePaste(req *CreatePasteRequest) (string, error) {
+	startTime := time.Now()
 	docID := util.Base58UID(defaultURLHashLen)
 
 	meta := map[string]string{}
@@ -182,10 +183,17 @@ func (app *App) savePaste(req *CreatePasteRequest) (string, error) {
 	meta["create_time"] = string(timeStr)
 	meta["ttl"] = req.Ttl.String()
 	err = app.blobStore.SetBlob(string(docID), strings.NewReader(req.Text), meta, req.Ttl)
+	if err != nil {
+		log.Printf("[TRACE] document %q saved in %dms", docID, time.Since(startTime).Milliseconds())
+	} else {
+		log.Printf("[TRACE] document %q not saved, error: %s", docID, err)
+	}
 	return string(docID), err
 }
 
 func (app *App) getDocument(docID string) (*Document, error) {
+	startTime := time.Now()
+	log.Printf("[TRACE] loading document %q", docID)
 	data, meta, err := app.blobStore.GetBlob(docID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't get data")
@@ -203,7 +211,9 @@ func (app *App) getDocument(docID string) (*Document, error) {
 	if err != nil {
 		log.Printf("[ERROR] can't parse time from metadata: %q: %s", meta["create_time"], err.Error())
 	}
-	doc := &Document{Document: *rdoc, DocId: docID, CreateTime: createTime}
+	doc := &Document{Document: *rdoc, DocID: docID, CreateTime: createTime}
+
+	log.Printf("[TRACE] document %q loaded and rendered in %dms", docID, time.Since(startTime).Milliseconds())
 	return doc, nil
 }
 
