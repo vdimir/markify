@@ -24,7 +24,7 @@ RUN export GOPATH=$(go env GOPATH) && \
 
 RUN go test -timeout=60s ./...
 
-FROM alpine:3.13
+FROM alpine:3.14.1
 
 WORKDIR /srv
 
