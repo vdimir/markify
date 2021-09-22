@@ -18,7 +18,7 @@
         {{- if .Msg }}<p>{{ .Msg }}</p>{{ end }}
         <form class="text-edit-form" action="/create" method="post" autocomplete="off" target="_blank">
             <input type="hidden" name="type" value="text">
-            <textarea name="data" maxlength="20000" placeholder="# paste text here…" required autofocus>{{ .InitialText }}</textarea>
+            <textarea name="data" placeholder="# paste text here…" required autofocus>{{ .InitialText }}</textarea>
             <div class="text-edit-form-controls">
                 <button class="btn-send-text" formtarget="_self" type="submit">
                     Send <i class="fa fa-paper-plane" aria-hidden="true"></i>
